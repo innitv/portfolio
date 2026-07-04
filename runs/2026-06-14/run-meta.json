@@ -1,0 +1,15 @@
+{
+  "project_slug": "siteportfolio",
+  "run_date": "2026-06-14",
+  "run_id": "siteportfolio-2026-06-14",
+  "created_at": "2026-06-13T20:04:47.365Z",
+  "updated_at": "2026-06-15T19:01:51.816Z",
+  "workflow_profile": "standard",
+  "execution_mode": "local",
+  "status": "partial",
+  "source_request": "Workflow run",
+  "output_dir": "C:\\Project\\product-agent-studio\\siteportfolio\\runs\\2026-06-14",
+  "has_reference": false,
+  "notion_publication": "unknown",
+  "last_validated_at": "2026-06-13T20:04:47.365Z"
+}

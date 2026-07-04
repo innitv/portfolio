@@ -1,0 +1,116 @@
+{
+  "run_id": "siteportfolio-2026-06-14",
+  "goal": "Workflow run",
+  "profile": "standard",
+  "execution_mode": "local",
+  "status": "partial",
+  "output_dir": "C:\\Project\\product-agent-studio\\siteportfolio\\runs\\2026-06-14",
+  "created_at": "2026-06-13T20:04:47.365Z",
+  "updated_at": "2026-06-15T19:01:51.816Z",
+  "stages": {
+    "00-intake": {
+      "id": "00-intake",
+      "title": "Intake and Recursive Brief",
+      "status": "partial",
+      "attempts": 1,
+      "artifacts": [
+        "run-plan.md",
+        "handoff-bundle.md",
+        "stage-gate-ledger.md"
+      ],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "01-research": {
+      "id": "01-research",
+      "title": "Deep Research",
+      "status": "pending",
+      "attempts": 0,
+      "artifacts": [],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "02-prd": {
+      "id": "02-prd",
+      "title": "Product Requirements",
+      "status": "pending",
+      "attempts": 0,
+      "artifacts": [],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "03-ia": {
+      "id": "03-ia",
+      "title": "Information Architecture",
+      "status": "pending",
+      "attempts": 0,
+      "artifacts": [],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "04-design": {
+      "id": "04-design",
+      "title": "Design Brief",
+      "status": "pending",
+      "attempts": 0,
+      "artifacts": [],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "05-copy": {
+      "id": "05-copy",
+      "title": "Copy Deck",
+      "status": "pending",
+      "attempts": 0,
+      "artifacts": [],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "06-screens": {
+      "id": "06-screens",
+      "title": "Screens",
+      "status": "pending",
+      "attempts": 0,
+      "artifacts": [],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "07-prototype": {
+      "id": "07-prototype",
+      "title": "Prototype",
+      "status": "pending",
+      "attempts": 0,
+      "artifacts": [],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "08-frontend": {
+      "id": "08-frontend",
+      "title": "Frontend",
+      "status": "completed",
+      "attempts": 1,
+      "artifacts": [
+        "frontend-result.md"
+      ],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "10-test-bench": {
+      "id": "10-test-bench",
+      "title": "Test Bench",
+      "status": "pending",
+      "attempts": 0,
+      "artifacts": [],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "11-qa": {
+      "id": "11-qa",
+      "title": "QA Review",
+      "status": "completed",
+      "attempts": 1,
+      "artifacts": [
+        "qa-report.md"
+      ],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    },
+    "12-release": {
+      "id": "12-release",
+      "title": "Release",
+      "status": "pending",
+      "attempts": 0,
+      "artifacts": [],
+      "updated_at": "2026-06-13T20:04:47.365Z"
+    }
+  }
+}

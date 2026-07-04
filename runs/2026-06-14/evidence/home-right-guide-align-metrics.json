@@ -1,0 +1,53 @@
+[
+  {
+    "name": "desktop",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "navX": 984,
+    "copyX": 984,
+    "thirdTitleX": 984,
+    "thirdDescX": 984,
+    "thirdTileX": 944,
+    "guideDelta": {
+      "navToThird": 0,
+      "copyToThird": 0
+    },
+    "overflowX": false
+  },
+  {
+    "name": "wide",
+    "viewport": [
+      1920,
+      1080
+    ],
+    "navX": 1250,
+    "copyX": 1250,
+    "thirdTitleX": 1250,
+    "thirdDescX": 1250,
+    "thirdTileX": 1210,
+    "guideDelta": {
+      "navToThird": 0,
+      "copyToThird": 0
+    },
+    "overflowX": false
+  },
+  {
+    "name": "mobile",
+    "viewport": [
+      390,
+      900
+    ],
+    "navX": 22,
+    "copyX": 22,
+    "thirdTitleX": 22,
+    "thirdDescX": 22,
+    "thirdTileX": 0,
+    "guideDelta": {
+      "navToThird": 0,
+      "copyToThird": 0
+    },
+    "overflowX": false
+  }
+]

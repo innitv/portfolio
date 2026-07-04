@@ -1,0 +1,16 @@
+{
+  "stage_id": "00-intake",
+  "title": "Intake and Recursive Brief",
+  "status": "partial",
+  "artifacts_created": [
+    "run-plan.md",
+    "handoff-bundle.md",
+    "stage-gate-ledger.md"
+  ],
+  "inputs_used": [],
+  "warnings": [
+    "Missing required artifact: recursive-brief.md"
+  ],
+  "errors": [],
+  "completed_at": "2026-06-13T20:04:47.365Z"
+}

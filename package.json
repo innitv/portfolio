@@ -1,0 +1,34 @@
+{
+  "name": "siteportfolio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "yarn@1.22.22",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "typecheck": "tsc --noEmit",
+    "deploy": "yarn build && node tools/deploy-portfolio-regru.mjs",
+    "deploy:dry-run": "yarn build && node tools/deploy-portfolio-regru.mjs --dry-run",
+    "qa": "yarn build && playwright test",
+    "qa:install": "playwright install chromium"
+  },
+  "dependencies": {
+    "framer-motion": "12.40.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0",
+    "@types/node": "25.9.1",
+    "@types/react": "19.2.15",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "typescript": "6.0.3",
+    "vite": "8.0.14"
+  }
+}
