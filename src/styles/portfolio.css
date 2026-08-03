@@ -1,0 +1,502 @@
+/*
+ * Продуктовый слой темы `portfolio` — то, чем токены shadcn не управляют.
+ *
+ * Источник значений — `outputs/portfolio-redesign-seconddesk/2026-08-01/STYLE_GUIDE.md`.
+ * Цвет, гарнитура и `tracking-tight` живут в токенах (`design/tokens/shadcn/portfolio.json`);
+ * здесь — шкала кеглей и трекинга, вертикальный ритм, поля контейнера, одна
+ * тень и движение. Всё скоупнуто на `[data-shadcn-theme="portfolio"]` или на
+ * классы `.pf-*`: рядом стоящий чужой экран этот слой не задевает.
+ *
+ * ─── ПОЧЕМУ ШКАЛА КЕГЛЕЙ КЛАССАМИ, А НЕ УТИЛИТАМИ ───────────────────────────
+ * Шкала сайта — целочисленная лестница 12·13·14·16·18·20·24·30·36·40 с
+ * СВОИМ трекингом на каждой ступени (потолок Inter −0.022em, посчитан по
+ * формуле автора гарнитуры). В Tailwind нет ни ступеней 13/30/40, ни связки
+ * «кегль → свой трекинг», поэтому каждая роль набиралась бы тройкой утилит и
+ * рассыпалась бы при первой правке.
+ *
+ * ─── ЧЕГО ЗДЕСЬ БОЛЬШЕ НЕТ (2026-08-02) ─────────────────────────────────────
+ * Сняты правила, оставшиеся без единого носителя после упрощения сайта:
+ * `.pf-canvas`/`.pf-sheet` (лист на серой подложке), `.pf-window*` (рамка окна
+ * вокруг схематичных превью), `.pf-stepper*` (липкое оглавление кейса),
+ * `.pf-frame-lg`, `.pf-block-target`, `.pf-lift`, `.pf-lead-xl`,
+ * `--pf-works-rhythm`. Мёртвое правило в теме опаснее отсутствующего:
+ * следующая сборка возьмёт его как «уже принятое» и вернёт снятый приём.
+ *
+ * Там же снят `.pf-flow-body` — ритм внутри раздела кейса. С переходом
+ * страницы кейса на формат блока `@shadcnblocks/case-study1` отбивки внутри
+ * раздела задаёт `prose`, и у правила не осталось ни одного носителя.
+ */
+
+/* Inter variable: сайт полностью русский, кириллица обязана быть в гарнитуре.
+   Пакет подключает все подмножества, браузер тянет нужный unicode-range. */
+@import "@fontsource-variable/inter";
+
+/*
+ * Цвет границ.
+ *
+ * В Tailwind 4 утилита `border` без явного цвета наследует `currentColor`.
+ * shadcn компенсирует это базовым правилом `* { border-color: var(--border) }`,
+ * но в этом проекте базового слоя нет — тема `a3` уже ловила ту же грабку и
+ * чинила её точечно для outline-кнопок (`styles/a3.css`).
+ *
+ * Здесь чинится системно для всей темы: без этого правила каждая карточка
+ * получала рамку 1px цветом чернил `#0a0a0a` вместо токена `--border`
+ * `#e5e5e5`. Замер до правки: `borderColor: rgb(10, 10, 10)` при том, что
+ * в теме объявлен светло-серый. Именно это читалось как «вычурные борды» —
+ * геометрия и радиус совпадали с реестром, расходился только цвет.
+ */
+[data-shadcn-theme="portfolio"] *,
+[data-shadcn-theme="portfolio"] *::before,
+[data-shadcn-theme="portfolio"] *::after {
+  border-color: var(--border);
+}
+
+[data-shadcn-theme="portfolio"] {
+  /* Единственная тень слоя — волосяная граница кадра со скриншотом. Токеном
+     она не управляется: Tailwind впечатывает тень в утилиту константой
+     (`design/tokens/shadcn/README.md`). */
+  --pf-shadow-hairline: 0 0 0 1px rgba(10, 10, 10, 0.08);
+
+  /* Вторичный текст МЕЛКОГО кегля. Правило STYLE_GUIDE.md: чем мельче кегль,
+     тем темнее серый. ≥16px → --muted-foreground #737373 (4.74:1);
+     ≤14px → это значение #525252 (7.81:1). Роли «второй приглушённый» в
+     семантике shadcn нет, поэтому переменная продуктовая. */
+  --pf-ink-soft: #525252;
+
+  /* Контейнер и поля: 1264 при полях 56 → полезная ширина 1152. */
+  --pf-container: 1264px;
+  --pf-gutter: 20px;
+  /* Вертикальный ритм блоков: 96 / 72 / 56 по точкам перелома. */
+  --pf-rhythm: 56px;
+  --pf-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (min-width: 721px) {
+  [data-shadcn-theme="portfolio"] {
+    --pf-gutter: 32px;
+    --pf-rhythm: 72px;
+  }
+}
+
+@media (min-width: 1101px) {
+  [data-shadcn-theme="portfolio"] {
+    --pf-gutter: 56px;
+    --pf-rhythm: 96px;
+  }
+}
+
+/* ─── Каркас ──────────────────────────────────────────────────────────────── */
+
+.pf-container {
+  box-sizing: border-box;
+  margin-inline: auto;
+  max-inline-size: var(--pf-container);
+  padding-inline: var(--pf-gutter);
+  inline-size: 100%;
+}
+
+/* Ритм между блоками страницы. Задаётся расстоянием между соседями, а не
+   отступом каждого блока: так первый блок не отбивается от шапки, а
+   последний не тащит пустоту в футер. */
+.pf-flow > * + * {
+  margin-block-start: var(--pf-rhythm);
+}
+
+/*
+ * Колонка прозы — 640 px, мера ~77 знаков при 16/26. Кадры из неё выходят
+ * намеренно: они и есть содержание кейса.
+ */
+.pf-measure {
+  max-inline-size: 640px;
+}
+
+/* ─── Типографика ─────────────────────────────────────────────────────────── */
+
+.pf-h1,
+.pf-h2,
+.pf-h3 {
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+/* Один H1 на все три экрана: разводящая, компания, кейс. Отдельных ступеней
+   под каждую страницу нет — заголовок везде один и тот же по роли. */
+.pf-h1 {
+  font-size: clamp(28px, 3.2vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+}
+
+.pf-h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.017em;
+}
+
+@media (min-width: 721px) {
+  .pf-h2 {
+    font-size: 24px;
+    line-height: 32px;
+    letter-spacing: -0.019em;
+  }
+}
+
+.pf-h3 {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+}
+
+.pf-lead {
+  font-size: 18px;
+  line-height: 26px;
+  letter-spacing: -0.014em;
+}
+
+/* Проза — читаемый регистр. Не смешивается с интерфейсным ни при каких
+   условиях (reference-analysis.md §1.7). */
+.pf-prose {
+  font-size: 16px;
+  line-height: 26px;
+  letter-spacing: -0.011em;
+}
+
+/* Интерфейсный регистр: навигация, кнопки, мета, описания карточек. */
+.pf-ui {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.006em;
+}
+
+.pf-caption {
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.003em;
+}
+
+.pf-micro {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.pf-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Крупное число в сетке метрик. Две верхние ступени шкалы сайта: 30 → 36.
+   Ступени 48, которую ставит исходный блок, в шкале нет (см. metric-strip.tsx). */
+.pf-metric {
+  font-size: 30px;
+  line-height: 36px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+
+@media (min-width: 641px) {
+  .pf-metric {
+    font-size: 36px;
+    line-height: 40px;
+  }
+}
+
+.pf-ink-soft {
+  color: var(--pf-ink-soft);
+}
+
+/* Ссылка обозначается ПОДЧЁРКИВАНИЕМ и весом, а не цветом: хроматики в
+   интерфейсе нет вовсе, и цвет как единственный признак состояния запрещён
+   (WCAG 1.4.1). */
+.pf-link {
+  font-weight: 500;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pf-link:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+/* Крошка — исключение из правила выше, по правке владельца 2026-08-03.
+   В покое подчёркивания и веса 500 нет: роль элемента здесь задаёт сам список
+   (`nav[aria-label=breadcrumb]`, позиция в цепочке, `aria-current` на текущей
+   странице), а не начертание. Тон уровня выше — `--muted-foreground` от
+   `BreadcrumbList`, текущая страница — чернила; цвет остаётся не единственным
+   признаком, поэтому WCAG 1.4.1 не задет. Аффорданс возвращается на указателе
+   и с клавиатуры: там подчёркивание появляется. */
+.pf-crumb {
+  text-decoration-line: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pf-crumb:hover {
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+}
+
+.pf-crumb:focus-visible {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* Кольцо фокуса: 2px чернил плюс 2px белого отступа, ахроматично. Фокус
+   попадает и на кадры со скриншотами, где цветное кольцо спорило бы с
+   брендами клиентов. */
+.pf-focus:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+/* ─── Тело кейса: мост между `prose` и шкалой сайта ───────────────────────── */
+
+/*
+ * Длинный текст кейса набран в `prose` (@tailwindcss/typography) — так устроен
+ * блок `@shadcnblocks/case-study1`, выбранный владельцем. Плагин даёт то, чего
+ * у нас нет: маркеры и втяжку списков, отбивку абзацев, оформление таблиц.
+ *
+ * ─── ГДЕ ОН СПОРИТ С НАШЕЙ ТИПОГРАФИКОЙ (три места) ─────────────────────────
+ * 1. КЕГЛЬ И ИНТЕРЛИНЬЯЖ. `prose` ставит 16/1.75 = 16/28 и `max-width: 65ch`.
+ *    Наша проза — 16/26 с трекингом −0.011em, мера 640 (`.pf-measure`).
+ * 2. ЦВЕТ. Палитра плагина — `colors.gray` Tailwind, а он в v4 задан в oklch
+ *    С ТОНОМ: `gray-700` = oklch(37.3% 0.034 259.733), то есть синеватый.
+ *    На монохромной странице это хроматика, которой быть не должно.
+ * 3. ЗАГОЛОВКИ. `prose h2` — 1.5em весом 700 без трекинга; наш `.pf-h2` —
+ *    24/32 весом 600 с трекингом −0.019em.
+ *
+ * ─── КАК РАЗВЕДЕНО ──────────────────────────────────────────────────────────
+ * Элементные правила плагина обёрнуты в `:where(…)`, то есть имеют НУЛЕВУЮ
+ * специфичность: любой наш класс на самом элементе их перекрывает. Поэтому
+ * пункты 1 и 3 решаются тем, что заголовки и абзацы несут свои `.pf-*`
+ * классы, а не «побеждают каскадом». Здесь остаётся то, что классом на элемент
+ * не повесишь: переменные цвета (пункт 2), кегль для неразмеченных узлов и
+ * ритм между разделами.
+ */
+
+.pf-article {
+  /* Цвета — на токены темы. Ни одного значения плагина не остаётся. */
+  --tw-prose-body: var(--muted-foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--muted-foreground);
+  --tw-prose-links: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--pf-ink-soft);
+  --tw-prose-bullets: var(--ring);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--pf-ink-soft);
+  --tw-prose-kbd: var(--foreground);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+
+  /* Страховка для узлов без своего класса: 16/26 вместо 16/28 у плагина. */
+  font-size: 16px;
+  line-height: 26px;
+  letter-spacing: -0.011em;
+}
+
+/*
+ * Ритм разделов задаётся здесь, а не отступом заголовка от плагина: `prose`
+ * ставит `h2 { margin-top: 2em }` на КАЖДЫЙ заголовок, включая самый первый, —
+ * и тело кейса начиналось бы с пустых 48 px под сеткой метрик.
+ */
+.pf-article > section + section {
+  margin-block-start: 48px;
+}
+
+.pf-article > section > :first-child {
+  margin-block-start: 0;
+}
+
+/* ─── Первый экран главной: фон ───────────────────────────────────────────── */
+
+/*
+ * Владелец выбрал `shadcnblocks.com/block/background-pattern22` — «Dashed grid
+ * background pattern, top edge emphasis». Блок платный, доступа к его коду нет,
+ * и код не вскрывался: приём стандартный, воспроизведён с нуля.
+ *
+ * Обе подложки лежат под содержимым (`z-index: -1`) и не ловят курсор. Живут
+ * они только на разводящей — элементы рендерит `PortfolioHomeView`, поэтому на
+ * страницах компании и кейса их нет по построению, а не по медиазапросу.
+ */
+.pf-grid-pattern,
+.pf-hero-glow {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/*
+ * Мягкий радиальный подсвет от верхней кромки. Замешан из `--muted-foreground`
+ * долей 10 %, то есть примерно #f3f3f3 на белом: под чернилами #0a0a0a это
+ * меняет контраст с 19.6:1 на 19.0:1 — то есть не меняет. Хроматики не вносит:
+ * оба конца шкалы ахроматичны.
+ */
+.pf-hero-glow {
+  block-size: 640px;
+  background-image: radial-gradient(
+    72% 58% at 50% 0%,
+    color-mix(in srgb, var(--muted-foreground) 10%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+/*
+ * Пунктирная сетка.
+ *
+ * ─── ПОЧЕМУ КРАСКА — ГРАДИЕНТ, А РИСУНОК — МАСКА ────────────────────────────
+ * Пунктирную сетку нельзя собрать из `repeating-linear-gradient`: линейный
+ * градиент ограничивает рисунок по ОДНОЙ оси, а штрих на линии ограничен по
+ * двум — 1 px поперёк и 3 px вдоль. Плитка градиента всегда закрашена во всю
+ * свою высоту, поэтому вертикальная линия выходит сплошной.
+ *
+ * Поэтому форма задана маской из SVG-плитки 64×64 (штрих 3, просвет 5 — период
+ * 8, ровно восемь на ячейку, так что на пересечениях обе линии начинаются со
+ * штриха), а ЦВЕТ остаётся в градиенте под маской. Отсюда два следствия:
+ * краска берётся из токена `--border`, а не зашита в SVG, и затухание книзу
+ * делает сам градиент — вторая маска и `mask-composite` не нужны.
+ *
+ * Ячейка 64 px: попадает в заданный владельцем интервал 60–70 и делится на
+ * период штриха нацело.
+ */
+.pf-grid-pattern {
+  block-size: 520px;
+  /*
+   * Краска сетки — `--muted-foreground` долей 34 %, то есть примерно #c7c7c7
+   * на белом. Чистый `--border` (#e5e5e5) здесь не годится: линия толщиной
+   * 1 px из штрихов по 3 px при таком тоне физически не видна — проверено
+   * снимком в масштабе 1:1, на нём сетки не было вовсе. Тон остаётся
+   * ахроматичным и светлее любого текста страницы.
+   */
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--muted-foreground) 34%, transparent) 0%,
+    color-mix(in srgb, var(--muted-foreground) 18%, transparent) 45%,
+    transparent 100%
+  );
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M0 .5h64M.5 0v64' stroke='%23000' stroke-dasharray='3 5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M0 .5h64M.5 0v64' stroke='%23000' stroke-dasharray='3 5'/%3E%3C/svg%3E");
+  -webkit-mask-size: 64px 64px;
+  mask-size: 64px 64px;
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+
+/* ─── Знак компании ───────────────────────────────────────────────────────── */
+
+/*
+ * Высота знака задаётся переменной, ширина считается браузером из
+ * соотношения сторон SVG. Так три знака разной пропорции (175×20, 155×24,
+ * 338×87) стоят в ряду на одной оптической высоте.
+ */
+.pf-logo svg {
+  block-size: var(--pf-logo-height, 20px);
+  inline-size: auto;
+  display: block;
+}
+
+/* ─── Кадр со скриншотом ──────────────────────────────────────────────────── */
+
+.pf-frame {
+  /* Тот же радиус, что у `Card` реестра (`rounded-xl`): кадр и карточка стоят
+     на одной странице, и разные скругления читались бы как разные системы. */
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--pf-shadow-hairline);
+  background-color: var(--muted);
+}
+
+.pf-frame img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+/*
+ * Потолок высоты кадра.
+ *
+ * Введён вместе с переключателем кадров (правка владельца 2026-08-03), и
+ * закрывает две вещи разом.
+ *
+ * Первая: кадр во всю колонку 692 px при вертикальной пропорции 0.72 даёт
+ * 961 px высоты — целый экран под один скриншот, который взглядом уже не
+ * охватить. Замеренные пропорции ассетов идут от 0.72 до 3.44, так что без
+ * потолка разброс высот в одном кейсе получается почти десятикратный.
+ *
+ * Вторая: кадры группы лежат в одной ячейке сетки, и высота контейнера равна
+ * самому высокому из них. У «Оптимизации флоу» в паре 1.60 и 0.94 — под
+ * широким кадром зияло 300 px пустоты. Потолок сжимает разброс: 480 против
+ * 432, то есть пустота падает с 300 до полусотни.
+ *
+ * Ширина при этом не назначается заново — `inline-size: auto` возвращает её
+ * пропорции, а рамка обжимает кадр по содержимому, чтобы не осталось серых
+ * полей по бокам.
+ */
+.pf-figure-capped .pf-frame {
+  inline-size: fit-content;
+  margin-inline: auto;
+}
+
+.pf-figure-capped .pf-frame img {
+  max-block-size: 480px;
+  inline-size: auto;
+  max-inline-size: 100%;
+}
+
+/* ─── Движение ────────────────────────────────────────────────────────────── */
+
+/*
+ * Анимация НАЗНАЧАЕТСЯ только при `no-preference`: при `reduce` она не
+ * отключается, а просто не существует, — отключать нечего.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .pf-motion {
+    transition-property: color, background-color, border-color, box-shadow,
+      text-decoration-color, opacity;
+    transition-duration: 150ms;
+    transition-timing-function: var(--pf-ease);
+  }
+}
+
+/* ─── Тени интерактивных примитивов ───────────────────────────────────────── */
+
+/*
+ * Тени сняты сразу со ВСЕЙ группы интерактивных примитивов реестра.
+ * `shadow-xs` зашит в `Button` (default и outline), `Input`, `Textarea`,
+ * `Select` и токеном не снимается; ловить их по одному за замечание — способ
+ * получить тень обратно с первым же добавленным компонентом
+ * (навык `shadcn-library` §4.2).
+ */
+[data-shadcn-theme="portfolio"] button,
+[data-shadcn-theme="portfolio"] a[class*="inline-flex"],
+[data-shadcn-theme="portfolio"] input,
+[data-shadcn-theme="portfolio"] textarea,
+[data-shadcn-theme="portfolio"] select {
+  box-shadow: none;
+}
+
+/*
+ * Правило `a.pf-nav-link:hover` стояло здесь и удалено 2026-08-03 вместе с
+ * контактами в шапке: чинить стало нечего, вариант `ghost` на сайте больше не
+ * используется.
+ *
+ * Само знание не пропало и здесь ему не место: «`ghost` на наведении
+ * ОСВЕТЛЯЕТ текст, потому что `--accent-foreground` светлее `--foreground`»
+ * — это свойство библиотеки, а не нашего продукта, и следующий продукт этот
+ * файл не откроет. Перенесено в навык `shadcn-library` §4.2a вместе с
+ * замером (19.8 → 16.44) и способом лечения.
+ */

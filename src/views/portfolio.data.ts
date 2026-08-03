@@ -1,73 +1,105 @@
-import * as React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { optimizedImageSources } from "./optimized-images";
-import "./styles.css";
+/**
+ * Контент портфолио: три компании, восемь кейсов.
+ *
+ * ─── ИСТОЧНИК И ГРАНИЦА ПРАВКИ ──────────────────────────────────────────────
+ * Блоки `contacts` и `companies` перенесены ДОСЛОВНО из
+ * `C:/Project/siteportfolio/src/PortfolioView.tsx` (строки 70-857) машинным
+ * копированием, а не пересказом: задача редизайна — визуальный слой, тексты и
+ * структура не меняются. Ни одна строка контента здесь не сочинена и не
+ * отредактирована; всё, что добавлено этим файлом, лежит НИЖЕ блока данных и
+ * является производными функциями (разбор чисел, ключ кадра), а не новым
+ * текстом.
+ *
+ * Единственное расхождение с исходником: поле `src` изображений оставлено
+ * внешним URL, как в оригинале, а локальный webp резолвится из него
+ * `imageKeyFromSrc` — базовое имя файла в URL совпадает с ключом манифеста
+ * `portfolio-images.generated.ts`.
+ */
 
-type CompanyId = "a3" | "rtk" | "smlt";
+import { optimizedImages, type OptimizedImageKey } from "./portfolio-images.generated"
 
-type CaseDetailSection = {
-  title: string;
-  body?: string[];
-  items?: string[];
-  quote?: string;
-  image?: {
-    alt: string;
-    caption: string;
-    src: string;
-  };
-  images?: {
-    alt: string;
-    caption: string;
-    src: string;
-  }[];
-  videos?: {
-    caption: string;
-    src: string;
-  }[];
-};
+export type CompanyId = "a3" | "rtk" | "smlt"
 
-type CaseStudy = {
-  id: string;
-  index: string;
-  title: string;
-  subtitle: string;
-  type: string;
-  year: string;
-  duration: string;
-  impact: string;
-  summary: string;
-  context: string;
-  problem: string;
-  solution: string[];
-  result: string[];
-  coverImage?: {
-    alt: string;
-    caption: string;
-    src: string;
-  };
-  detailSections?: CaseDetailSection[];
-  preview: "dashboard" | "flow" | "mobile" | "table" | "map";
-};
+export interface CaseImage {
+  alt: string
+  caption: string
+  src: string
+}
 
-type Company = {
-  id: CompanyId;
-  index: string;
-  name: string;
-  industry: string;
-  years?: string;
-  description: string;
-  cases: CaseStudy[];
-};
+export interface CaseDetailSection {
+  title: string
+  body?: string[]
+  items?: string[]
+  quote?: string
+  image?: CaseImage
+  images?: CaseImage[]
+  videos?: { caption: string; src: string }[]
+}
 
-const pageTransition = {
-  duration: 0.28,
-  ease: [0.22, 1, 0.36, 1] as const,
-};
-const revealTransition = {
-  duration: 0.24,
-  ease: [0.22, 1, 0.36, 1] as const,
-};
-const contacts = [
+export interface CaseStudy {
+  id: string
+  index: string
+  title: string
+  subtitle: string
+  type: string
+  year: string
+  duration: string
+  impact: string
+  summary: string
+  context: string
+  problem: string
+  solution: string[]
+  result: string[]
+  coverImage?: CaseImage
+  detailSections?: CaseDetailSection[]
+  preview: "dashboard" | "flow" | "mobile" | "table" | "map"
+}
+
+export interface Company {
+  id: CompanyId
+  index: string
+  name: string
+  industry: string
+  years?: string
+  description: string
+  /**
+   * Короткая версия описания — только для карточки на разводящей.
+   *
+   * Заведена по решению владельца 2026-08-03: полное описание занимало в
+   * карточке четыре-пять строк, ряд читался тяжело. Обрезать многоточием он
+   * запретил прямо — «это значит, что его надо переписать». Полное описание
+   * остаётся на странице компании, здесь живёт сжатая формулировка.
+   *
+   * Двоеточие обязательно: по нему  делит фразу на чернила и
+   * приглушённое.
+   */
+  cardLede: string
+  cases: CaseStudy[]
+}
+
+export interface Contact {
+  label: string
+  href: string
+  external: boolean
+}
+
+/**
+ * Шапка разводящей: имя, заголовок, лид.
+ *
+ * Все три строки существуют на текущем сайте (`siteportfolio/src/PortfolioView.tsx`,
+ * блок `portfolio-hero`) и перенесены дословно.
+ *
+ * Лид возвращён к полной формулировке автора. Он был сокращён 2026-08-02 под
+ * микро-герой в одну строку; микро-героя больше нет — заголовок и лид стоят
+ * обычной парой, и урезать фразу больше незачем.
+ */
+export const profile = {
+  name: "Иван Игнатов",
+  title: "Дизайнер сложных продуктов",
+  lead: "Проектирую B2B-платежи, сервисные кабинеты, подписки и proptech-инструменты, где важны сценарии, статусы, данные и понятные действия.",
+} as const
+
+export const contacts: Contact[] = [
   { label: "tg", href: "https://t.me/innitv", external: true },
   { label: "email", href: "mailto:ignatov@a-3.ru", external: false },
   {
@@ -77,7 +109,7 @@ const contacts = [
   },
 ];
 
-const companies: Company[] = [
+export const companies: Company[] = [
   {
     id: "a3",
     index: "I",
@@ -86,6 +118,8 @@ const companies: Company[] = [
     years: "2025—н.в.",
     description:
       "Платежные сценарии для бизнеса: главный экран кабинета, регистрация, дизайн-система, токены и AI-эксперименты для landing/research.",
+    cardLede:
+      "Расчёты между компаниями: рабочий кабинет.",
     cases: [
       {
         id: "dashboard-redesign",
@@ -109,10 +143,28 @@ const companies: Company[] = [
         result: [
           "Сократить путь к ключевым сценариям, повысить прозрачность продукта и сделать личный кабинет полезнее для ежедневной работы B2B-клиента.",
         ],
+        /*
+         * ─── ЗАМЕНА КАДРА ШАПКИ 2026-08-02 ────────────────────────────────
+         * Здесь стоял `a3-dashboard-redesign-figma-hero` с подписью «Редизайн
+         * главной». Кадр открыт и проверен: на нём СТАРЫЙ промо-экран —
+         * «Заявка на подключение», карусель «Единый реестр платежей», стоковое
+         * фото. То есть ровно то состояние, которое кейс описывает как
+         * проблему, подписанное как результат.
+         *
+         * Подпись переписать нельзя (тексты кейсов не сочиняются), поэтому
+         * кадр заменён на тот, который действительно показывает предмет кейса:
+         * `a3-dashboard-redesign-figma-main-card`, «Новый дашборд». Он раньше
+         * стоял внутри раздела «Контекст» — оттуда снят, чтобы не показывать
+         * одно изображение дважды. Ни alt, ни caption не менялись: пара
+         * перенесена целиком.
+         *
+         * Кадр со старым промо-экраном из данных удалён: другого места, где
+         * его подпись была бы правдой, в кейсе нет.
+         */
         coverImage: {
-          alt: "Редизайн главной страницы личного кабинета А3",
-          caption: "Редизайн главной",
-          src: "https://ivan-ignatov.online/assets/a3-dashboard-redesign-figma-hero-BMeVnBgb.png",
+          alt: "Новый дашборд А3",
+          caption: "Новый дашборд",
+          src: "https://ivan-ignatov.online/assets/a3-dashboard-redesign-figma-main-card-CSycQJK_.png",
         },
         detailSections: [
           {
@@ -122,11 +174,6 @@ const companies: Company[] = [
               "До редизайна главный экран не отражал реальную операционную работу пользователя: после входа он видел промо-блок с предложением подключить услугу.",
               "Главная страница была визуально чистой, но продуктово слабой: она не помогала принимать решения, контролировать состояние платежей и быстрее переходить к рабочим сценариям.",
             ],
-            image: {
-              alt: "Новый дашборд А3",
-              caption: "Новый дашборд",
-              src: "https://ivan-ignatov.online/assets/a3-dashboard-redesign-figma-main-card-CSycQJK_.png",
-            },
           },
           {
             title: "Цель",
@@ -458,6 +505,8 @@ const companies: Company[] = [
     years: "2024—2025",
     description:
       "Подписки, управление услугами, web-сценарии и onboarding: интерфейсы для массового пользователя, где важно быстро понять состояние услуги.",
+    cardLede:
+      "Подписки и услуги: понятно с первого экрана.",
     cases: [
       {
         id: "subscriptions",
@@ -724,6 +773,8 @@ const companies: Company[] = [
     years: "2023—2024",
     description:
       "B2B/B2E-инструменты для стройки и недвижимости: планирование, цифровые двойники, карта опций и контроль соответствия.",
+    cardLede:
+      "Стройка и недвижимость: инструменты застройщика.",
     cases: [
       {
         id: "mdg",
@@ -856,737 +907,223 @@ const companies: Company[] = [
   },
 ];
 
-const portfolioBasePath: string = String(import.meta.env.VITE_PORTFOLIO_BASE_PATH ?? "/portfolio").replace(/\/$/, "");
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Производные функции. Ниже этой черты нет ни одной новой строки контента:
+ * всё, что возвращается, — это фрагменты текстов выше или служебные значения.
+ * ────────────────────────────────────────────────────────────────────────── */
 
-function getRouteParts() {
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  const baseParts = portfolioBasePath.split("/").filter(Boolean);
-  return baseParts.every((part, index) => parts[index] === part) ? parts.slice(baseParts.length) : parts;
+/**
+ * Ключ манифеста кадров по внешнему URL из данных.
+ *
+ * Базовое имя файла в URL (`…/a3-flow-figma-hero-CsT6xTUU.png`) совпадает с
+ * ключом `portfolio-images.generated.ts`. Кадр, которого нет в манифесте,
+ * возвращает `undefined` — вызывающий код обязан это обработать, а не
+ * подставить битую картинку.
+ */
+export function imageKeyFromSrc(src: string): OptimizedImageKey | undefined {
+  const base = src.split("/").pop()?.replace(/\.(png|jpg|jpeg|webp)$/i, "")
+  return base && base in optimizedImages ? (base as OptimizedImageKey) : undefined
 }
 
-function portfolioPath(path = "") {
-  const suffix = path ? `/${path.replace(/^\/+/, "")}` : "";
-  return `${portfolioBasePath}${suffix}` || "/";
+/** `srcSet` из всех доступных ширин кадра. */
+export function imageSrcSet(key: OptimizedImageKey): string {
+  return optimizedImages[key].widths
+    .map((width) => `/assets/optimized/${key}-${width}.webp ${width}w`)
+    .join(", ")
 }
 
-function companyKicker(company: Company) {
-  return [company.industry, company.years].filter(Boolean).join(" · ");
+/** Файл минимальной ширины — резерв для `src`, когда `srcSet` не применился. */
+export function imageFallback(key: OptimizedImageKey): string {
+  return `/assets/optimized/${key}-${optimizedImages[key].widths[0]}.webp`
 }
 
-function getRoute() {
-  const parts = getRouteParts();
-  const companyId = parts[0] as CompanyId | undefined;
-  const caseId = parts[2];
-  return { companyId, caseId };
+/**
+ * Предельная ширина показа кадра в CSS-пикселях.
+ *
+ * `STYLE_GUIDE.md` → Анти-паттерны: «ни один кадр не растянут выше
+ * natural/1.5». Ассеты портфолио — от 480 до 2880 px, и «кадр во всю ширину
+ * 1152» физически возможен только у четырёх из двадцати двух. Поэтому ширина
+ * не назначается вёрсткой, а ВЫЧИСЛЯЕТСЯ: узкий кадр показывается уже и
+ * остаётся резким, вместо того чтобы мылить на retina.
+ */
+export function maxRenderWidth(key: OptimizedImageKey, limit = 1152): number {
+  const widths = optimizedImages[key].widths
+  const natural = widths[widths.length - 1]
+  return Math.min(limit, Math.round(natural / 1.5))
 }
 
-function push(path: string) {
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
+export interface CaseMetric {
+  /** Подпись: метка до двоеточия, если она есть, иначе фраза целиком. */
+  label: string
+  /** Числовой фрагмент, вырезанный из фразы дословно. */
+  value: string
 }
 
-export function PortfolioView() {
-  const [route, setRoute] = React.useState(getRoute);
+/**
+ * Разделы, откуда поднимаются числа в строку метрик под заголовком кейса.
+ *
+ * Порядок значим: сначала явные метрики продукта, затем бизнес-эффект, затем
+ * общий результат. Первый раздел, давший хотя бы одно число, и выигрывает —
+ * смешивать источники нельзя, иначе рядом встанут метрики разной природы.
+ */
+const METRIC_SECTION_TITLES = [
+  "Метрики успеха",
+  "Бизнес-эффект",
+  "Внедрение и результаты",
+  "После редизайна",
+]
 
-  React.useEffect(() => {
-    const handleRoute = () => setRoute(getRoute());
-    window.addEventListener("popstate", handleRoute);
-    return () => window.removeEventListener("popstate", handleRoute);
-  }, []);
+/*
+ * ─── ЧИСЛО НЕ ЗАХВАТЫВАЕТ ТОЧКУ ПРЕДЛОЖЕНИЯ ─────────────────────────────────
+ * Дробная часть записана как `[.,]\d+`, а не `[.,]?\d*`: второй вариант
+ * позволял разделителю стоять БЕЗ цифр после него, и из «NPS вырос с 62 до
+ * 74.» поднималось значение «62 → 74.» — с точкой предложения внутри числа.
+ * На кегле 36 эта точка читается как опечатка. Найдено просмотром страницы
+ * кейса «Подписки».
+ */
 
-  const company = companies.find((item) => item.id === route.companyId);
-  const caseStudy = company?.cases.find((item) => item.id === route.caseId);
-  const routeKey = `${route.companyId ?? "home"}-${route.caseId ?? "index"}`;
+/** `с 3% до 7%` → две величины: у автора этот формат уже есть в `impact`. */
+const RANGE = /с\s+(\d+(?:[.,]\d+)?\s*%?)\s+до\s+(\d+(?:[.,]\d+)?\s*%?)/
+/** Одиночная величина: `15–25%`, `18 п.п.`, `10–15 пунктов`, `4,6 из 5`. */
+const SINGLE =
+  /(\d+(?:[.,]\d+)?(?:\s*[–—-]\s*\d+(?:[.,]\d+)?)?\s*(?:%|п\.п\.|пунктов|пункта|пункт|из \d+))/
 
-  const page = (() => {
-    if (company && caseStudy) {
-      return <CasePage company={company} caseStudy={caseStudy} />;
+/**
+ * Точка в конце предложения снимается, точка сокращения — нет.
+ *
+ * Прежнее безусловное `replace(/\.$/)` превращало «…выросла на 18 п.п.» в
+ * «…выросла на 18 п.п» — то есть портило сокращение автора.
+ */
+function withoutTrailingPeriod(text: string): string {
+  return /\.\p{L}\.$/u.test(text) ? text : text.replace(/\.$/, "")
+}
+
+/**
+ * Единица измерения величины: всё, что стоит после последней цифры.
+ *
+ * `15–25%` → `%`, `10–15 пунктов` → `пунктов`, `с 3% до 7%` → `%`.
+ */
+function unitOf(value: string): string {
+  return (/\d[^\d]*$/.exec(value)?.[0].replace(/^\d/, "") ?? "").trim().toLowerCase()
+}
+
+/**
+ * Ряд метрик держит ОДНУ единицу измерения.
+ *
+ * Правило родственно запрету смешивать источники выше и введено по той же
+ * причине — рядом не должны стоять величины разной природы. Замер, на котором
+ * оно появилось (кейс «Редизайн главной», 2026-08-03): три метрики в
+ * процентах и четвёртая «10–15 пунктов». Слово не помещалось в колонку 230 px,
+ * переносилось второй строкой и поднимало число на 40 px над соседями — ряд
+ * из четырёх чисел стоял на двух разных линиях. Но дело не только в вёрстке:
+ * голое «10–15» рядом с процентами читается как проценты, а это неверно.
+ *
+ * Поэтому лишняя единица не подписывается мельче и не переносится — метрика
+ * просто не поднимается в шапку. Она никуда не пропадает: полная фраза
+ * остаётся в своём разделе тела кейса, откуда её сюда и подняли.
+ *
+ * Преобладающая единица считается по частоте; при равенстве побеждает единица
+ * первой метрики, то есть порядок автора.
+ */
+function sameUnit(metrics: CaseMetric[]): CaseMetric[] {
+  if (metrics.length < 2) return metrics
+
+  const counts = new Map<string, number>()
+  for (const metric of metrics) {
+    const unit = unitOf(metric.value)
+    counts.set(unit, (counts.get(unit) ?? 0) + 1)
+  }
+
+  const leader = unitOf(metrics[0].value)
+  let winner = leader
+  for (const [unit, count] of counts) {
+    if (count > (counts.get(winner) ?? 0)) winner = unit
+  }
+
+  return metrics.filter((metric) => unitOf(metric.value) === winner)
+}
+
+/**
+ * Числа кейса, поднятые из тела наверх.
+ *
+ * Ни одна цифра не сочиняется и не пересчитывается: `value` — это подстрока
+ * исходного предложения. Фраза без числа строкой метрик не становится
+ * (правило `supabase.com` → «нет значения — нет строки»), а величина в чужой
+ * единице — не становится тоже, см. `sameUnit`.
+ */
+export function caseMetrics(caseStudy: CaseStudy, limit = 4): CaseMetric[] {
+  const sources: string[][] = []
+  for (const title of METRIC_SECTION_TITLES) {
+    const section = caseStudy.detailSections?.find((item) => item.title === title)
+    if (section?.items?.length) sources.push(section.items)
+  }
+  sources.push(caseStudy.result)
+
+  for (const items of sources) {
+    const metrics: CaseMetric[] = []
+    for (const item of items) {
+      const range = RANGE.exec(item)
+      const single = range ? null : SINGLE.exec(item)
+      const value = range
+        ? `${range[1].trim()} → ${range[2].trim()}`
+        : single?.[1].trim()
+      if (!value) continue
+
+      const colon = item.indexOf(":")
+      const head = colon > 0 ? item.slice(0, colon).trim() : ""
+      const label = head && head.length <= 28 ? head : withoutTrailingPeriod(item)
+      metrics.push({ label, value })
+      if (metrics.length === limit) break
     }
+    if (metrics.length > 0) return sameUnit(metrics)
+  }
 
-    if (company) {
-      return <CompanyPage company={company} />;
-    }
-
-    return <PortfolioHome />;
-  })();
-
-  return (
-    <div className="portfolio-stage">
-      <AnimatePresence initial={false}>
-        {React.cloneElement(page, { key: routeKey })}
-      </AnimatePresence>
-    </div>
-  );
+  return []
 }
 
-function MotionPage({
-  children,
-  className,
-  onReady,
-}: {
-  children: React.ReactNode;
-  className: string;
-  onReady?: () => void;
-}) {
-  const prefersReducedMotion = useReducedMotion();
-
-  return (
-    <motion.main
-      className={className}
-      initial={prefersReducedMotion ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={pageTransition}
-      onAnimationComplete={onReady}
-    >
-      {children}
-    </motion.main>
-  );
+/**
+ * «3 кейса» / «2 кейса» / «1 кейс» — русская форма числительного.
+ *
+ * Счётчик ПОКОМПАНИЙНЫЙ: он говорит, сколько работ открыто в этом разделе, и
+ * стоит в мета-строке карточки компании. Сводного счётчика «8 кейсов» на
+ * главной нет — он читался как «больше ничего нет», хотя показано только то,
+ * что можно показывать.
+ */
+export function caseCountLabel(count: number): string {
+  const mod100 = count % 100
+  const mod10 = count % 10
+  if (mod10 === 1 && mod100 !== 11) return `${count} кейс`
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} кейса`
+  return `${count} кейсов`
 }
 
-function MotionReveal({
-  children,
-  className,
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-}) {
-  const prefersReducedMotion = useReducedMotion();
-
-  return (
-    <motion.div
-      className={className}
-      initial={prefersReducedMotion ? false : { opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true, margin: "-12% 0px -12% 0px" }}
-      transition={{ ...revealTransition, delay }}
-    >
-      {children}
-    </motion.div>
-  );
+export function companyById(id: string): Company | undefined {
+  return companies.find((company) => company.id === id)
 }
 
-function PortfolioHome({ onReady }: { onReady?: () => void }) {
-  return (
-    <MotionPage className="portfolio-shell portfolio-home-shell" onReady={onReady}>
-      <Header />
-      <motion.section
-        className="portfolio-hero"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.04, delayChildren: 0.04 } },
-        }}
-      >
-        <motion.div variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }} transition={revealTransition}>
-          <p className="portfolio-kicker">Портфолио</p>
-          <h1 aria-label="Дизайнер сложных продуктов">
-            Дизайнер
-            <br />
-            <em>сложных продуктов</em>
-          </h1>
-        </motion.div>
-        <motion.div className="portfolio-hero-copy" variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }} transition={revealTransition}>
-          <p>
-            Проектирую B2B-платежи, сервисные кабинеты, подписки и proptech-инструменты,
-            где важны сценарии, статусы, данные и понятные действия.
-          </p>
-        </motion.div>
-      </motion.section>
-
-      <section className="portfolio-company-tiles" aria-label="Компании">
-        {companies.map((company, index) => (
-          <motion.button
-            className="portfolio-company-tile"
-            key={company.id}
-            aria-label={`Открыть компанию ${company.name}, ${company.cases.length} кейсов`}
-            onClick={() => push(portfolioPath(company.id))}
-            type="button"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ ...revealTransition, delay: 0.08 + index * 0.04 }}
-          >
-            <span className="portfolio-tile-top">
-              <span className="portfolio-row-index">{company.index}</span>
-              <span className="portfolio-row-subtitle">{company.industry}</span>
-            </span>
-            <span className="portfolio-tile-main">
-              <span className="portfolio-row-title">{company.name}</span>
-              <span className="portfolio-row-description">{company.description}</span>
-            </span>
-            <span className="portfolio-tile-footer">
-              <span className="portfolio-tile-meta-row">
-                <span className="portfolio-row-meta">{company.years ?? company.industry}</span>
-                <span className="portfolio-row-count">
-                  {company.cases.length}
-                  <span>кейса</span>
-                </span>
-              </span>
-              <span className="portfolio-tile-cta">
-                Смотреть кейсы <span>→</span>
-              </span>
-            </span>
-          </motion.button>
-        ))}
-      </section>
-      <PortfolioFooter />
-    </MotionPage>
-  );
+export function caseById(company: Company, id: string): CaseStudy | undefined {
+  return company.cases.find((item) => item.id === id)
 }
 
-function CompanyPage({ company, onReady }: { company: Company; onReady?: () => void }) {
+/**
+ * Разделы кейса для степпера и тела статьи.
+ *
+ * У кейсов без `detailSections` состав собирается из базовых полей — ровно
+ * так же, как на текущем сайте (`PortfolioView.tsx` → `CasePage`), чтобы
+ * степпер «01…08» существовал у каждого кейса, а не у большинства.
+ */
+export function caseSections(caseStudy: CaseStudy): CaseDetailSection[] {
   return (
-    <MotionPage className="portfolio-shell portfolio-company-shell" onReady={onReady}>
-      <div className="portfolio-breadcrumb">
-        <button onClick={() => push(portfolioPath())} type="button">
-          ← Главная
-        </button>
-        <span>·</span>
-        <strong>{company.name}</strong>
-      </div>
-      <section className="portfolio-company-hero">
-        <MotionReveal delay={0.04}>
-          <p className="portfolio-kicker">
-            {companyKicker(company)}
-          </p>
-          <h1>{company.name}</h1>
-        </MotionReveal>
-        <MotionReveal delay={0.1}>
-          <p className="portfolio-company-lead">{company.description}</p>
-        </MotionReveal>
-      </section>
-      <div className="portfolio-case-section-head" aria-hidden="true">
-        <span>Кейсы</span>
-        <strong>
-          {company.cases.length} {company.cases.length === 1 ? "проект" : "проекта"}
-        </strong>
-      </div>
-      <section className="portfolio-case-tiles" aria-label={`Кейсы компании ${company.name}`}>
-        {company.cases.map((caseStudy, index) => (
-          <motion.button
-            className="portfolio-case-tile"
-            key={caseStudy.id}
-            aria-label={`Открыть кейс ${caseStudy.title}`}
-            onClick={() => push(portfolioPath(`${company.id}/case/${caseStudy.id}`))}
-            type="button"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ ...revealTransition, delay: 0.08 + index * 0.04 }}
-          >
-            <span className="portfolio-tile-top">
-              <span className="portfolio-row-index">{caseStudy.index}</span>
-              <span className="portfolio-row-subtitle">{caseStudy.type}</span>
-            </span>
-            <span className="portfolio-tile-main">
-              <span className="portfolio-case-title">{caseStudy.title}</span>
-              <span className="portfolio-row-subtitle">{caseStudy.subtitle}</span>
-            </span>
-            <span className="portfolio-row-description">{caseStudy.summary}</span>
-            <span className="portfolio-tile-footer">
-              <span className="portfolio-tile-meta-row">
-                <span className="portfolio-row-meta portfolio-row-meta--impact">{caseStudy.impact}</span>
-              </span>
-              <span className="portfolio-tile-cta">
-                Читать кейс <span>→</span>
-              </span>
-            </span>
-          </motion.button>
-        ))}
-      </section>
-      <PortfolioFooter suffix={company.name} />
-    </MotionPage>
-  );
+    caseStudy.detailSections ?? [
+      { title: "Контекст", body: [caseStudy.context] },
+      { title: "Проблема", quote: caseStudy.problem },
+      { title: "Решение", items: caseStudy.solution },
+      { title: "Результат", items: caseStudy.result },
+    ]
+  )
 }
 
-function CasePage({
-  company,
-  caseStudy,
-  onReady,
-}: {
-  company: Company;
-  caseStudy: CaseStudy;
-  onReady?: () => void;
-}) {
-  const caseIndex = company.cases.findIndex((item) => item.id === caseStudy.id);
-  const previousCase = caseIndex > 0 ? company.cases[caseIndex - 1] : undefined;
-  const nextCase = caseIndex >= 0 && caseIndex < company.cases.length - 1 ? company.cases[caseIndex + 1] : undefined;
-  const sections = React.useMemo(
-    () =>
-      caseStudy.detailSections ?? [
-        {
-          title: "Контекст",
-          body: [caseStudy.context],
-        },
-        {
-          title: "Проблема",
-          quote: caseStudy.problem,
-        },
-        {
-          title: "Решение",
-          items: caseStudy.solution,
-        },
-        {
-          title: "Результат",
-          items: caseStudy.result,
-        },
-      ],
-    [caseStudy],
-  );
-  React.useEffect(() => {
-    const sectionNodes = sections
-      .map((_, index) => document.getElementById(`section-${index}`))
-      .filter((node): node is HTMLElement => Boolean(node));
-    const navLinks = sectionNodes
-      .map((node) => document.querySelector<HTMLAnchorElement>(`.portfolio-article-layout aside a[href="#${node.id}"]`))
-      .filter((node): node is HTMLAnchorElement => Boolean(node));
-
-    if (!sectionNodes.length || !navLinks.length) {
-      return;
-    }
-
-    let frame = 0;
-
-    const updateActiveSection = () => {
-      const readingLine = window.innerHeight * 0.35;
-      const isNearBottom =
-        window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 8;
-      const currentSection =
-        (isNearBottom && sectionNodes[sectionNodes.length - 1]) ||
-        [...sectionNodes].sort(
-          (a, b) =>
-            Math.abs(a.getBoundingClientRect().top - readingLine) -
-            Math.abs(b.getBoundingClientRect().top - readingLine),
-        )[0];
-
-      navLinks.forEach((link) => {
-        const isActive = link.hash === `#${currentSection.id}`;
-        link.classList.toggle("is-active", isActive);
-        if (isActive) {
-          link.setAttribute("aria-current", "true");
-        } else {
-          link.removeAttribute("aria-current");
-        }
-      });
-    };
-
-    const handleScroll = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(updateActiveSection);
-    };
-
-    updateActiveSection();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
-    const interval = window.setInterval(updateActiveSection, 250);
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearInterval(interval);
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, [caseStudy.id, sections]);
-
-  return (
-    <MotionPage className="portfolio-shell portfolio-article-shell" onReady={onReady}>
-      <div className="portfolio-breadcrumb">
-        <button onClick={() => push(portfolioPath())} type="button">
-          ← Главная
-        </button>
-        <span>·</span>
-        <button onClick={() => push(portfolioPath(company.id))} type="button">
-          {company.name}
-        </button>
-        <span>·</span>
-        <strong>{caseStudy.title}</strong>
-      </div>
-      <section className="portfolio-article-hero">
-        <MotionReveal delay={0.04}>
-          <h1 aria-label={`${caseStudy.title}. ${caseStudy.subtitle}`}>{caseStudy.title}</h1>
-          <p>
-            <strong>{caseStudy.subtitle}.</strong> {caseStudy.summary}
-          </p>
-        </MotionReveal>
-      </section>
-      <div className="portfolio-article-layout">
-        <aside>
-          <div className="portfolio-toc-heading">
-            <p>Содержание</p>
-            <span aria-hidden="true">Листайте →</span>
-          </div>
-          <nav aria-label="Содержание кейса" className="portfolio-article-toc-nav">
-            {sections.map((section, index) => (
-              <a href={`#section-${index}`} key={section.title}>
-                <span>0{index + 1}</span>
-                {section.title}
-              </a>
-            ))}
-          </nav>
-        </aside>
-        <article>
-          {sections.map((section, index) => (
-            <ArticleSection
-              id={`section-${index}`}
-              index={`0${index + 1}`}
-              key={section.title}
-              title={section.title}
-            >
-              {caseStudy.coverImage && section.title.toLocaleLowerCase("ru").startsWith("цель") && (
-                <figure className="portfolio-source-image portfolio-article-cover">
-                  <MediaImage alt={caseStudy.coverImage.alt} src={caseStudy.coverImage.src} />
-                  <figcaption>{caseStudy.coverImage.caption}</figcaption>
-                </figure>
-              )}
-              <CaseSectionContent section={section} />
-              {!caseStudy.detailSections && index === 2 && <Preview variant={caseStudy.preview} />}
-            </ArticleSection>
-          ))}
-          <nav aria-label="Навигация между кейсами" className="portfolio-next">
-            <div className="portfolio-next-links">
-              {previousCase && (
-                <button
-                  aria-label={`Предыдущий кейс: ${previousCase.title}`}
-                  className="portfolio-next-case portfolio-next-case--previous"
-                  onClick={() => push(portfolioPath(`${company.id}/case/${previousCase.id}`))}
-                  type="button"
-                >
-                  <span>← Предыдущий кейс</span>
-                  <strong>{previousCase.title}</strong>
-                </button>
-              )}
-              {nextCase && (
-                <button
-                  aria-label={`Следующий кейс: ${nextCase.title}`}
-                  className="portfolio-next-case portfolio-next-case--next"
-                  onClick={() => push(portfolioPath(`${company.id}/case/${nextCase.id}`))}
-                  type="button"
-                >
-                  <span>Следующий кейс →</span>
-                  <strong>{nextCase.title}</strong>
-                </button>
-              )}
-            </div>
-            <button className="portfolio-all-cases" onClick={() => push(portfolioPath(company.id))} type="button">
-              ← Все кейсы {company.name}
-            </button>
-          </nav>
-        </article>
-      </div>
-    </MotionPage>
-  );
-}
-
-function Header() {
-  return (
-    <header className="portfolio-header">
-      <div>
-        <strong>Иван Игнатов</strong>
-      </div>
-      <nav aria-label="Контакты">
-        {contacts.map((contact) => (
-          <a
-            href={contact.href}
-            key={contact.label}
-            rel={contact.external ? "noreferrer" : undefined}
-            target={contact.external ? "_blank" : undefined}
-          >
-            {contact.label}
-          </a>
-        ))}
-      </nav>
-    </header>
-  );
-}
-
-function PortfolioFooter({ suffix = "портфолио" }: { suffix?: string }) {
-  return (
-    <footer className="portfolio-footer">
-      <span>© 2026 Иван Игнатов · {suffix}</span>
-      <span>
-        {contacts.map((contact, index) => (
-          <React.Fragment key={contact.label}>
-            {index > 0 && " · "}
-            <a
-              href={contact.href}
-              rel={contact.external ? "noreferrer" : undefined}
-              target={contact.external ? "_blank" : undefined}
-            >
-              {contact.label}
-            </a>
-          </React.Fragment>
-        ))}
-      </span>
-    </footer>
-  );
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div>
-      <dt>{value}</dt>
-      <dd>{label}</dd>
-    </div>
-  );
-}
-
-function ArticleSection({
-  children,
-  id,
-  index,
-  title,
-}: {
-  children: React.ReactNode;
-  id: string;
-  index: string;
-  title: string;
-}) {
-  return (
-    <motion.section
-      className="portfolio-article-section"
-      id={id}
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true, margin: "-18% 0px -18% 0px" }}
-      transition={revealTransition}
-    >
-      <h2>
-        <span>{index}</span>
-        {title}
-      </h2>
-      {children}
-    </motion.section>
-  );
-}
-
-function CaseSectionContent({ section }: { section: CaseDetailSection }) {
-  return (
-    <>
-      {section.body?.map((paragraph) => (
-        <p key={paragraph}>{paragraph}</p>
-      ))}
-      {section.quote && <blockquote>{section.quote}</blockquote>}
-      {section.items && <NumberedList items={section.items} />}
-      {section.image && (
-        <figure className="portfolio-source-image">
-          <MediaImage alt={section.image.alt} src={section.image.src} />
-          <figcaption>{section.image.caption}</figcaption>
-        </figure>
-      )}
-      {section.images && (
-        <div className="portfolio-source-slider" aria-label={`${section.title}: изображения`}>
-          {section.images.map((image) => (
-            <figure className="portfolio-source-slide" key={image.src}>
-              <MediaImage alt={image.alt} src={image.src} />
-              <figcaption>{image.caption}</figcaption>
-            </figure>
-          ))}
-        </div>
-      )}
-      {section.videos && (
-        <div
-          className="portfolio-source-slider portfolio-video-slider"
-          aria-label={`${section.title}: видео`}
-        >
-          {section.videos.map((video) => (
-            <motion.figure
-              className="portfolio-source-slide"
-              key={video.src}
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "-10% 0px" }}
-              transition={revealTransition}
-            >
-              <LazyVideo src={video.src} />
-              <figcaption>{video.caption}</figcaption>
-            </motion.figure>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-function useNearViewport<T extends HTMLElement>(rootMargin = "420px 0px") {
-  const ref = React.useRef<T | null>(null);
-  const [isNearViewport, setIsNearViewport] = React.useState(false);
-
-  React.useEffect(() => {
-    const node = ref.current;
-
-    if (!node || isNearViewport) {
-      return;
-    }
-
-    if (!("IntersectionObserver" in window)) {
-      setIsNearViewport(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsNearViewport(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin },
-    );
-
-    observer.observe(node);
-
-    return () => observer.disconnect();
-  }, [isNearViewport, rootMargin]);
-
-  return [ref, isNearViewport] as const;
-}
-
-function MediaImage({ alt, src }: { alt: string; src: string }) {
-  const [isLoaded, setIsLoaded] = React.useState(false);
-  const [frameRef, shouldLoad] = useNearViewport<HTMLSpanElement>();
-  const optimizedSource = optimizedImageSources[src];
-
-  React.useEffect(() => {
-    setIsLoaded(false);
-  }, [src]);
-
-  return (
-    <span ref={frameRef} className={`portfolio-media-frame ${isLoaded ? "is-loaded" : ""}`}>
-      {shouldLoad && (
-        <picture>
-          {optimizedSource && (
-            <source
-              sizes={optimizedSource.sizes}
-              srcSet={optimizedSource.srcSet}
-              type={optimizedSource.type}
-            />
-          )}
-          <motion.img
-            alt={alt}
-            src={src}
-            loading="lazy"
-            decoding="async"
-            initial={{ opacity: 0, scale: 0.985 }}
-            animate={isLoaded ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.985 }}
-            transition={pageTransition}
-            onLoad={() => setIsLoaded(true)}
-          />
-        </picture>
-      )}
-    </span>
-  );
-}
-
-function LazyVideo({ src }: { src: string }) {
-  const [frameRef, shouldLoad] = useNearViewport<HTMLVideoElement>("260px 0px");
-
-  return (
-    <video
-      ref={frameRef}
-      controls
-      playsInline
-      preload={shouldLoad ? "metadata" : "none"}
-      src={shouldLoad ? src : undefined}
-    />
-  );
-}
-
-function NumberedList({ items }: { items: string[] }) {
-  return (
-    <div className="portfolio-numbered-list">
-      {items.map((item, index) => (
-        <div key={item}>
-          <span>0{index + 1}</span>
-          <p>{item}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Preview({ compact = false, variant }: { compact?: boolean; variant: CaseStudy["preview"] }) {
-  return (
-    <div className={`portfolio-preview portfolio-preview-${variant} ${compact ? "is-compact" : ""}`}>
-      {variant === "dashboard" && <DashboardPreview />}
-      {variant === "flow" && <FlowPreview />}
-      {variant === "mobile" && <MobilePreview />}
-      {variant === "table" && <TablePreview />}
-      {variant === "map" && <MapPreview />}
-    </div>
-  );
-}
-
-function DashboardPreview() {
-  return (
-    <>
-      <div className="preview-sidebar" />
-      <div className="preview-main">
-        <div className="preview-kpi-row">
-          <span />
-          <span />
-          <span />
-        </div>
-        <div className="preview-actions">
-          <span>Платеж</span>
-          <span>Реестр</span>
-          <span>Банк</span>
-        </div>
-        <div className="preview-table">
-          <span />
-          <span />
-          <span />
-          <span />
-        </div>
-      </div>
-    </>
-  );
-}
-
-function FlowPreview() {
-  return (
-    <>
-      <div className="preview-flow-step">Вход</div>
-      <div className="preview-flow-step">Проверка</div>
-      <div className="preview-flow-step">Доступ</div>
-    </>
-  );
-}
-
-function MobilePreview() {
-  return (
-    <>
-      <div className="preview-phone">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="preview-phone">
-        <span />
-        <span />
-        <span />
-      </div>
-    </>
-  );
-}
-
-function TablePreview() {
-  return (
-    <div className="preview-token-table">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <span key={index} />
-      ))}
-    </div>
-  );
-}
-
-function MapPreview() {
-  return (
-    <div className="preview-map">
-      {Array.from({ length: 9 }).map((_, index) => (
-        <span key={index} />
-      ))}
-    </div>
-  );
+/** Все кадры раздела в одном списке — обложка, одиночный кадр, серия. */
+export function sectionImages(section: CaseDetailSection): CaseImage[] {
+  return [...(section.image ? [section.image] : []), ...(section.images ?? [])]
 }

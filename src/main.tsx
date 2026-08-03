@@ -1,6 +1,11 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { PortfolioView } from "./PortfolioView";
+
+import { PortfolioRoute } from "@/views/PortfolioRoute";
+
+// Стили подключаются здесь: раньше их импортировал `PortfolioView.tsx`,
+// удалённый при переносе на shadcn/ui 2026-08-03.
+import "./styles.css";
 
 const rootElement = document.getElementById("root");
 
@@ -10,6 +15,6 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <React.StrictMode>
-    <PortfolioView />
+    <PortfolioRoute />
   </React.StrictMode>,
 );

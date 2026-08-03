@@ -10,12 +10,14 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client"],
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
     "vite.config.ts",
+    "vitest.config.ts",
     "playwright.config.ts",
     "tests/**/*.ts"
   ],
