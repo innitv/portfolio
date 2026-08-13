@@ -59,6 +59,24 @@ export const Default: Story = {
     // Синего экрана до нажатия нет: он приходит по клику, а не по наведению.
     await userEvent.hover(canvas.getByTestId("pa-company-a3"))
     await expect(canvas.queryByTestId("pa-sheet")).toBeNull()
+
+    /*
+     * Крупные слова несут зафиксированное сглаживание.
+     *
+     * Сам дефект машина не видит: в headless композитинг идёт иначе, и кадры
+     * текста в композитном слое и вне его совпадают побайтово. Но объявление
+     * свойства проверить можно — и это ловит его случайное снятие, из-за
+     * которого буквы снова начнут менять толщину по ходу анимации.
+     * Разбор — `/ui-craft:build` §7.1.
+     */
+    for (const selector of [".pa-word", ".pa-name"]) {
+      const node = canvasElement.querySelector(selector)
+      if (!node) throw new Error(`Не найдено ${selector}`)
+      await expect(
+        getComputedStyle(node).getPropertyValue("-webkit-font-smoothing"),
+        `${selector}: сглаживание не зафиксировано`,
+      ).toBe("antialiased")
+    }
   },
   tags: ["vr-page"],
 }
