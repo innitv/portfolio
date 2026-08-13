@@ -1,0 +1,720 @@
+/*
+ * Слой страницы кейса — `/<companyId>/case/<caseId>`.
+ *
+ * Структура взята из кадра владельца Figma `Hqqav4V81gZIxxH6AwSUWj`, узел
+ * **82:206** («Образовал», 1440×6579). Типографика, сетка клеткой, кобальт и
+ * три гарнитуры — общие с `/archive`. Разбор десяти живых страниц кейсов, из
+ * которого взяты приёмы, — `case-manner.md` в run-каталоге студии.
+ *
+ * ─── ПОЛЕ ЗДЕСЬ СВЕТЛОЕ, А НЕ ЧЕРНИЛЬНОЕ ────────────────────────────────────
+ * Решение владельца 2026-08-13: «скорее всего надо делать белый фон, чтобы
+ * удобно было читать». Причина в жанре, а не во вкусе: `/archive` — плакат в
+ * один экран, где текста три строки, а кейс — девять тысяч пикселей сплошного
+ * чтения. Белый текст на чернилах на такой длине утомляет: тонкие штрихи на
+ * тёмном «разрастаются», и строка теряет опору.
+ *
+ * Манера при этом не теряется — она держится не цветом фона, а типографикой,
+ * сеткой и кобальтом. Кобальт остаётся ровно там же, где был: плоскость «Итог»
+ * и отклик строк. Переход с тёмного `/archive` на светлый кейс намеренно
+ * резкий: это смена жанра, а не сбой.
+ *
+ * ─── ЧТО ИМЕННО ВЗЯТО ИЗ ПРИМЕРА ────────────────────────────────────────────
+ * 1. Ритм «мелкая метка → крупное содержание». Метки 13 px моношрифтом,
+ *    значения 20, абзацы 28-32: иерархия держится кеглем, а не украшениями.
+ * 2. Колонка фактов у левого края, содержание — со второй половины ширины
+ *    (в кадре: факты 0-202, текст 696-1324 при поле 40).
+ * 3. Подпись под КАЖДЫМ показом. У девяти живых сайтов из десяти подписи
+ *    бессистемны, и скриншот интерфейса без неё заставляет читателя гадать,
+ *    на что смотреть.
+ * 4. Показы парами по половине ширины и вставки во всю ширину.
+ * 5. Таблица строками с линиями 1 px — под «Что сделал» и «Результат».
+ * 6. Соседний кейс плашкой в конце.
+ *
+ * Основа манеры (цвет, гарнитуры, поле, клетка, формулы кеглей) — в общем слое.
+ */
+
+@import "./portfolio-ink.css";
+
+:root {
+  /*
+   * Кегль имени кейса. Названия здесь длиннее одного слова («Редизайн главной»,
+   * «Дизайн-система»), поэтому потолок ниже, чем у PRODUCT на `/archive`, а
+   * перенос на вторую строку разрешён — обрезать название нельзя.
+   */
+  --pc-title-size: clamp(32px, var(--pa-inner) / 9.5, 104px);
+  /*
+   * ─── ЛЕСТНИЦА КЕГЛЕЙ ─────────────────────────────────────────────────────
+   * Снята с кейсов wemakefab.ru (`case-manner.md` §8) — образец владельца.
+   * У них ровно пять ступеней, и главное в них не размеры, а ЧАСТОТА: на 190
+   * блоков основного текста приходится 25 тезисов вдвое с половиной крупнее.
+   * Тезис и есть приём разбиения — он открывает каждый раздел.
+   *
+   * До этой правки страница шла одним кеглем: 38 блоков из 66 набраны 28 px
+   * одной ширины подряд («однообразный текст, всё сливается» — владелец).
+   *
+   * Заодно уменьшен основной кегль. 28 px в колонке 637 давали 33 знака в
+   * строке — строка рвётся на середине мысли; у образца 22 px в колонке 671,
+   * то есть около 52 знаков, и это ближе к тому, что читается длинно.
+   */
+  --pc-body-size: clamp(17px, 0.9rem + 0.42vw, 22px);
+  /* Тезис раздела: 2.4 основного кегля — та же пропорция, что 54 к 22. */
+  --pc-lead-size: clamp(26px, 1.4rem + 1.65vw, 48px);
+  /*
+   * Заголовок раздела. Перепад к тексту здесь БОЛЬШЕ, чем у образца (28 против
+   * 20, то есть в 1.4 раза), и это вынужденно: у wemakefab заголовок стоит в
+   * отдельной колонке слева, и ему хватает положения. У нас левую колонку
+   * занимают липкие факты, заголовок идёт над текстом — на одной вертикали
+   * разница в 15 % не читается вовсе, проверено замером.
+   */
+  --pc-part-size: clamp(21px, 1.1rem + 0.78vw, 30px);
+  /* Значение в паре «метка → значение». */
+  --pc-value-size: clamp(16px, 1rem + 0.28vw, 20px);
+  /* Вертикальный шаг между крупными блоками страницы. */
+  --pc-block: clamp(56px, 9vh, 120px);
+  /* Зазор между показами в паре. */
+  --pc-gap: clamp(16px, 2.2vw, 32px);
+
+  /*
+   * ─── СВЕТЛАЯ ПАЛИТРА СТРАНИЦЫ ──────────────────────────────────────────
+   * Объявлена своими именами, а не переопределением `--pa-ink`: те же
+   * переменные читает `/archive`, и подмена значения в общем корне перекрасила
+   * бы плакат заодно с кейсом.
+   *
+   * Поле не чисто белое: #fdfdfc гасит резь от 100 % белого на большой площади,
+   * оставаясь белым на вид. Текст — те же чернила, что фон `/archive`.
+   */
+  --pc-bg: #fdfdfc;
+  --pc-fg: var(--pa-ink);
+  /* Служебные строки: 5.4:1 к полю — выше порога 4.5 с запасом. */
+  --pc-muted: #6b6b6b;
+  /* Линии таблиц и рамок. */
+  --pc-rule: rgba(11, 11, 11, 0.22);
+  /* Сетка-подложка: та же клетка, что на плакате, но тёмная и слабее. */
+  --pc-line: rgba(11, 11, 11, 0.07);
+}
+
+/* ─── Канва ────────────────────────────────────────────────────────────────
+ * Атрибут ставит и снимает сам вид — так же, как на `/archive`. Прокрутка тут
+ * не запрещается ни при каких условиях: страница кейса заведомо длиннее окна.
+ */
+html[data-portfolio-surface="case"],
+html[data-portfolio-surface="case"] body {
+  background-color: var(--pc-bg);
+}
+
+.pc-root {
+  position: relative;
+  min-block-size: 100dvh;
+  background-color: var(--pc-bg);
+  color: var(--pc-fg);
+  font-family: var(--pa-sans);
+}
+
+.pc-screen {
+  position: relative;
+  z-index: 1;
+  padding: var(--pa-field);
+}
+
+/* ─── Шапка ────────────────────────────────────────────────────────────────
+ * «← все работы» стоит на том же уровне, что «портфолио · 2026» на `/archive`:
+ * человек переключает экраны, и строка не должна прыгать. Разбор трёх причин,
+ * по которым она разъезжалась, — в `portfolio-archive.css` у `.pa-back`.
+ */
+.pc-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-top-leading);
+  letter-spacing: 0.06em;
+  color: var(--pc-muted);
+}
+
+.pc-back {
+  position: relative;
+  display: block;
+  inline-size: fit-content;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+/* Тач-цель добирается псевдоэлементом, а не высотой кнопки: высота сдвинула бы
+   строку с уровня шапки. По тексту цель была 13×18 — вдвое меньше минимума. */
+.pc-back::after,
+.pc-home::after {
+  content: "";
+  position: absolute;
+  inset-inline: -8px;
+  inset-block: -14px;
+  min-block-size: 44px;
+}
+
+.pc-home {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.pc-back:focus-visible,
+.pc-home:focus-visible {
+  outline: 2px solid var(--pc-fg);
+  outline-offset: 6px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc-back:hover,
+  .pc-home:hover {
+    color: var(--pc-fg);
+  }
+}
+
+/* ─── Открытие ─────────────────────────────────────────────────────────────── */
+
+.pc-head {
+  margin-block-start: clamp(48px, 11vh, 120px);
+}
+
+.pc-index {
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  letter-spacing: var(--pa-meta-tracking);
+  color: var(--pc-muted);
+}
+
+.pc-title {
+  margin-block-start: 18px;
+  font-size: var(--pc-title-size);
+  font-weight: 600;
+  line-height: var(--pa-word-leading);
+  letter-spacing: var(--pa-word-tracking);
+  text-transform: uppercase;
+  /* Длинное название переносится по словам, а не режется: обрезанное имя кейса
+     нельзя ни прочитать, ни восстановить. */
+  overflow-wrap: break-word;
+}
+
+.pc-lede {
+  margin-block-start: 24px;
+  max-inline-size: 34ch;
+  font-size: var(--pc-body-size);
+  line-height: 1.3;
+  color: rgba(11, 11, 11, 0.78);
+}
+
+/*
+ * Итог кейса — единственное место на странице, где кобальт работает текстом.
+ * Дальше он приходит плоскостью, и два разных применения одного цвета рядом
+ * читались бы как разные цвета.
+ */
+.pc-impact-line {
+  margin-block-start: 20px;
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: var(--pa-cobalt);
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  letter-spacing: var(--pa-meta-tracking);
+  /* Белый ЯВНО: на светлой странице цвет текста наследуется чернильный, и на
+     кобальте он давал 2.47:1 — поймано замером при переводе на светлое поле. */
+  color: #fff;
+}
+
+/* ─── Двухколоночный разворот ──────────────────────────────────────────────
+ * Метки у левого края, содержание — со второй половины ширины. Пропорция взята
+ * из кадра владельца: факты 202 px от края, текст с 696 при ширине 1360.
+ */
+/*
+ * ─── СИЛОВАЯ ЛИНИЯ ТЕКСТА ──────────────────────────────────────────────────
+ * Весь текст выстроен по одной вертикали чуть левее центра — приём образца: у
+ * `wemakefab.ru` она проходит по 501 px из 1440, то есть по 35 % ширины.
+ *
+ * Слева от линии не пустота: туда уходят заголовки разделов. Так у образца и
+ * устроено — раздел стоит у самого поля, текст начинается с линии, и глаз
+ * ловит структуру, не читая её.
+ *
+ * Путь правки за день (все числа при 1440): две равные колонки ставили текст
+ * на 728 — «смотришь только в правую часть»; узкая колонка увела на 352 — «не
+ * настолько»; доля 37.5 % дала 40 %; снятие колонки фактов прижало текст к
+ * полю на 60 — «я разве просил прижать к левой стороне». Мишень — линия
+ * образца, 34-38 % ширины.
+ *
+ * Ширину строки держит не колонка, а мера: 52ch у абзаца, 28ch у тезиса.
+ */
+.pc-body {
+  margin-block-start: var(--pc-block);
+  display: grid;
+  grid-template-columns: minmax(140px, 30%) minmax(0, 1fr);
+  gap: var(--pc-gap);
+  align-items: start;
+}
+
+/*
+ * Поток и разделы раскрываются в сетку страницы (`display: contents`) — иначе
+ * заголовок остаётся ребёнком своего `<section>` и до колонок не достаёт.
+ * Разметка при этом сохраняет секции: они нужны для структуры документа, а не
+ * для раскладки.
+ */
+.pc-flow,
+.pc-section {
+  display: contents;
+}
+
+.pc-flow > *,
+.pc-section > * {
+  grid-column: 2;
+}
+
+/*
+ * ─── ПОДВАЛ СТРАНИЦЫ НАЧИНАЕТСЯ ЗАНОВО ─────────────────────────────────────
+ * Всё, что идёт после итогов, силовой линии не подчиняется: кобальтовая
+ * плоскость уходит навылет за поля, а соседний кейс и контакты начинаются от
+ * левого поля. Читатель на этом месте закончил текст, и держать его взгляд на
+ * той же вертикали больше незачем — линия работала на чтение, а тут его нет.
+ */
+.pc-impact,
+.pc-next {
+  grid-column: 1 / -1;
+}
+
+/*
+ * Заголовки разделов стоят В ПОТОКЕ, над своим текстом, а не слева от линии.
+ *
+ * Вынести их в левую колонку пробовали 2026-08-13 — владелец вернул: «оставь
+ * как были, в нужных логических местах». Резон: у образца слева стоят короткие
+ * служебные метки («Логотип», «Каталог»), а у нас там оказывались полноценные
+ * заголовки разделов — оторванные от текста, они читались как отдельный
+ * столбец оглавления, а не как его начало.
+ *
+ * Слева от линии остаётся воздух — это и есть приём: колонка держит поле
+ * зрения, а не наполняется чем попало.
+ */
+
+/*
+ * Факты строкой под героем. Колонки автоматические: «Работа» длиннее остальных
+ * втрое, и равные доли оставляли бы под годом пустое место в половину экрана.
+ */
+.pc-facts {
+  margin-block-start: var(--pc-block);
+  padding-block: 24px;
+  border-block-start: 1px solid var(--pc-rule);
+  border-block-end: 1px solid var(--pc-rule);
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(24px, 4vw, 72px);
+}
+
+/*
+ * ─── КОЛОНКА ФАКТОВ ЛИПКАЯ ─────────────────────────────────────────────────
+ * Приём `arestov.design`, выбран владельцем 2026-08-13 из двух собранных
+ * вариантов. Факты держатся весь скролл, чтобы на десятом экране подряд было
+ * видно, чей это кейс, какого он года и какова была роль.
+ *
+ * (Липкая колонка снята владельцем — её разбор в компоненте.)
+ */
+
+.pc-fact + .pc-fact {
+  margin-block-start: 28px;
+}
+
+.pc-label {
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-meta-leading);
+  letter-spacing: var(--pa-meta-tracking);
+  color: var(--pc-muted);
+}
+
+.pc-value {
+  margin-block-start: 8px;
+  font-size: var(--pc-value-size);
+  line-height: 1.35;
+}
+
+/* Абзацы в потоке не имеют своих полей — вертикаль задают сами блоки. */
+.pc-flow p {
+  margin: 0;
+}
+
+/* ─── Секция: тезис, заголовок, текст ──────────────────────────────────────
+ * Три роли вместо одной. У образца поток разбит тезисом каждые семь-восемь
+ * абзацев, и держится это перепадом кегля, а не отбивками: 54 против 22.
+ */
+
+/* Вертикальный шаг раздела задаёт его заголовок: сама секция раскрыта в сетку
+   и своего бокса не имеет. */
+
+/*
+ * Тезис — одно-два предложения, открывающих раздел. Мера строки у него короче
+ * абзацной (28 знаков против 62): крупный кегль на длинной строке заставляет
+ * глаз возвращаться, и «крупно» превращается в «трудно».
+ */
+.pc-lead {
+  margin-block-start: 24px;
+  max-inline-size: 28ch;
+  font-size: var(--pc-lead-size);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+/*
+ * Заголовок раздела в потоке. Стоит НАД текстом, а не слева, — левую колонку
+ * занимают липкие факты. Чтобы он не сливался с абзацем, работают три вещи
+ * сразу: кегль на ступень выше, вес и отбивка сверху.
+ */
+.pc-part {
+  margin-block-start: calc(var(--pc-block) * 0.55);
+  font-size: var(--pc-part-size);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/*
+ * Мера строки — 52ch, а не 62. Единица `ch` считается по ширине нуля, а он в
+ * Manrope шире средней буквы: 62ch давали 77 знаков реального текста при норме
+ * 50-70. Замерено в браузере, а не взято из справочника.
+ */
+.pc-section-text {
+  margin-block-start: 16px;
+  max-inline-size: 52ch;
+  font-size: var(--pc-body-size);
+  line-height: 1.45;
+}
+
+/* Списки — тем же кеглем, что абзацы: у образца они составляют почти половину
+   основного текста, и отдельным размером их набирать не за что. */
+ul.pc-section-text {
+  margin-block-start: 16px;
+  padding-inline-start: 0;
+  list-style: none;
+}
+
+ul.pc-section-text li {
+  position: relative;
+  padding-inline-start: 22px;
+}
+
+ul.pc-section-text li + li {
+  margin-block-start: 12px;
+}
+
+ul.pc-section-text li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0.62em;
+  inline-size: 7px;
+  block-size: 7px;
+  background-color: var(--pa-cobalt);
+}
+
+/* ─── Показы ───────────────────────────────────────────────────────────────
+ * Пара по половине ширины или один во всю. Подпись стоит ПОД плашкой, а не
+ * поверх: поверх она читается как часть интерфейса на скриншоте.
+ */
+.pc-shots {
+  margin-block-start: var(--pc-block);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--pc-gap);
+}
+
+.pc-shots[data-wide="true"] {
+  grid-template-columns: 1fr;
+}
+
+.pc-shot {
+  margin: 0;
+}
+
+.pc-shot-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background-color: rgba(11, 11, 11, 0.04);
+  border: 1px solid rgba(11, 11, 11, 0.12);
+}
+
+.pc-shots[data-wide="true"] .pc-shot-frame {
+  aspect-ratio: 16 / 9;
+}
+
+.pc-shot-frame img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pc-shot figcaption {
+  margin-block-start: 14px;
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-meta-leading);
+  letter-spacing: var(--pa-meta-tracking);
+  color: var(--pc-muted);
+}
+
+/* ─── Таблица строками ─────────────────────────────────────────────────────
+ * «Что сделал» и «Результат» — тот же приём, что «Что под капотом» в кадре
+ * владельца: строка с линией сверху, метка слева, содержание со второй
+ * половины.
+ */
+.pc-rows {
+  margin-block-start: var(--pc-block);
+  border-block-start: 1px solid var(--pc-rule);
+}
+
+.pc-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 1fr;
+  gap: var(--pc-gap);
+  padding-block: 24px;
+  border-block-end: 1px solid var(--pc-rule);
+}
+
+.pc-row ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pc-row li {
+  font-size: var(--pc-value-size);
+  line-height: 1.45;
+}
+
+.pc-row li + li {
+  margin-block-start: 12px;
+}
+
+/* ─── Плоскость результата ─────────────────────────────────────────────────
+ * Кобальт во всю ширину навылет — та же плоскость, что приходит синим экраном
+ * компании на `/archive`. Здесь она стоит там, где у собранных сайтов ничего
+ * нет: блок с числами результата нашёлся у одного сайта из десяти.
+ */
+.pc-impact {
+  margin-block-start: var(--pc-block);
+  margin-inline: calc(-1 * var(--pa-field));
+  padding: clamp(32px, 6vh, 72px) var(--pa-field);
+  background-color: var(--pa-cobalt);
+  /* Единственный тёмный остров на светлой странице — цвет текста внутри задаётся
+     здесь, иначе он наследует чернила страницы (замер дал 2.24:1). */
+  color: #fff;
+}
+
+/* Метка на кобальте: приглушённый белый вместо серого со светлой страницы —
+   серый на синем даёт 2.2:1. */
+.pc-label--on-cobalt {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.pc-impact-grid {
+  margin-block-start: 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(24px, 4vw, 56px);
+}
+
+.pc-metric-value {
+  font-family: var(--pa-mono);
+  font-size: clamp(28px, var(--pa-inner) / 26, 56px);
+  font-weight: 300;
+  line-height: 1;
+}
+
+.pc-metric-caption {
+  margin-block-start: 10px;
+  font-family: var(--pa-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+/* ─── Соседний кейс ────────────────────────────────────────────────────────── */
+
+.pc-next {
+  margin-block-start: var(--pc-block);
+  margin-block-end: var(--pa-field);
+}
+
+.pc-next-card {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pc-gap);
+  inline-size: 100%;
+  padding: 28px 0;
+  border: 0;
+  border-block-start: 1px solid var(--pc-rule);
+  border-block-end: 1px solid var(--pc-rule);
+  background: transparent;
+  color: var(--pc-fg);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color 0.3s var(--pa-ease-out),
+    color 0.3s var(--pa-ease-out),
+    padding-inline 0.3s var(--pa-ease-out);
+}
+
+.pc-next-title {
+  font-size: clamp(24px, var(--pa-inner) / 30, 48px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pc-next-meta {
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  letter-spacing: var(--pa-meta-tracking);
+  color: var(--pc-muted);
+}
+
+/*
+ * Инверсия — тот же отклик, что у строк кейсов на синем экране `/archive`, но
+ * зеркальный: там белая плашка на кобальте, здесь кобальтовая на светлом. Так
+ * сохраняется и приём, и связь с плоскостью «Итог». Обратный вариант — кобальт
+ * буквами на чернильной плашке — давал бы 2.5:1 и не читался.
+ */
+.pc-next-card:hover,
+.pc-next-card:focus-visible {
+  padding-inline: 20px;
+  background-color: var(--pa-cobalt);
+  color: #fff;
+  outline: 0;
+}
+
+.pc-next-card:hover .pc-next-meta,
+.pc-next-card:focus-visible .pc-next-meta {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ─── Подвал ───────────────────────────────────────────────────────────────
+ * Одна строка в манере шапки. Подвал сайта сюда не годится: он светлый и живёт
+ * на теме `portfolio`, а страница стоит на чернилах.
+ */
+.pc-foot {
+  margin-block-start: var(--pc-block);
+  padding-block-start: 24px;
+  border-block-start: 1px solid var(--pc-rule);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-meta-leading);
+  letter-spacing: var(--pa-meta-tracking);
+  color: var(--pc-muted);
+}
+
+.pc-foot-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.pc-foot a {
+  position: relative;
+  color: var(--pc-fg);
+  text-decoration: none;
+  border-block-end: 1px solid var(--pc-rule);
+}
+
+/* Тач-цель — тем же приёмом, что у строк шапки: высотой ссылку не растягиваем,
+   иначе подчёркивание уедет от текста. */
+.pc-foot a::after {
+  content: "";
+  position: absolute;
+  inset-inline: -8px;
+  inset-block: -13px;
+  min-block-size: 44px;
+}
+
+.pc-foot a:focus-visible {
+  outline: 2px solid var(--pc-fg);
+  outline-offset: 6px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc-foot a:hover {
+    border-block-end-color: var(--pc-fg);
+  }
+}
+
+/* ─── Занавес перехода с синего экрана ─────────────────────────────────────
+ * Плоскость лежит над страницей кейса и уезжает вверх. Цвет и типографика — с
+ * `/archive`, потому что уезжает именно тот экран; разбор — в `sheet-curtain`.
+ */
+.pa-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  padding: var(--pa-field);
+  background-color: var(--pa-cobalt);
+  color: #fff;
+}
+
+/*
+ * Имя стоит РОВНО там же, где на синем экране компании: поле, под ним строка
+ * «← все работы» (18 px по интерлиньяжу шапки), затем те же 18 px отбивки.
+ *
+ * Сначала занавес центрировал имя по вертикали — и в момент подмены оно
+ * съезжало с верха экрана к середине. Владелец увидел это как рывок: «дёргается
+ * при закрытии, заголовок спускается на центр». Занавес обязан начинаться там,
+ * где закончился экран, который он заменяет.
+ */
+.pa-curtain-word {
+  /*
+   * 18 — строка кнопки «← все работы», 18 — её отбивка до имени. Ровно те же
+   * величины, что на синем экране: замер в настоящем браузере даёт 96 px и там,
+   * и здесь.
+   *
+   * 🔴 Не подгонять это число по встроенной панели. Там `requestAnimationFrame`
+   * заморожен, анимация проявления имени не доигрывает и оставляет его на 20 px
+   * ниже места — по этому ложному замеру слагаемое один раз уже «исправили» на
+   * +20, и в настоящем браузере имя улетело вниз ровно на столько же.
+   */
+  margin-block-start: calc(var(--pa-top-leading) + 18px);
+  font-family: var(--pa-sans);
+  font-size: clamp(40px, var(--pa-inner) / 4.6, 215px);
+  /* Вес 400, как у имени на синем экране (`.pa-huge` его не задаёт и наследует
+     обычное начертание). Стояло 600 — надпись жирнела прямо в момент подмены. */
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+/* ─── Узкие экраны ─────────────────────────────────────────────────────────
+ * Двухколоночные развороты складываются в одну: при поле 20 и ширине 320 на
+ * колонку остаётся 140 px — метка и значение туда не встают.
+ */
+@media (max-width: 899px) {
+  .pc-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pc-shots {
+    grid-template-columns: 1fr;
+  }
+}

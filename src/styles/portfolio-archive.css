@@ -1,0 +1,827 @@
+/*
+ * Слой поверхности `archive` — швейцарский экран-заезд на маршруте `/archive`.
+ *
+ * Источник значений — согласованный с владельцем прототип
+ * `outputs/portfolio-swiss-shot/2026-08-11/prototype/v8.html` (репозиторий
+ * студии). Каждое число там стояло по правке владельца или по пойманному
+ * дефекту, поэтому при переносе они не пересчитывались: величины подняты в
+ * переменные `--pa-*` ниже, а правила ссылаются только на переменные.
+ *
+ * ─── ГРАНИЦА С ТЕМОЙ `portfolio` ────────────────────────────────────────────
+ * Это НЕ тема shadcn и не её расширение. Тема `portfolio` монохромная, светлая
+ * и живёт на `[data-shadcn-theme="portfolio"]`; здесь чернильный фон, кобальт и
+ * три чужие гарнитуры. Поэтому слой скоупнут на собственный класс `.pa-root` и
+ * на атрибут `data-portfolio-surface="archive"` корня документа — ни один
+ * селектор не пересекается с темой, и существующие страницы сайта его не видят.
+ * Файл импортируется только модулем вида, а вид грузится лениво: на `/`,
+ * `/<companyId>` и `/<companyId>/case/<caseId>` этот CSS не приезжает вовсе.
+ *
+ * ─── ПОЧЕМУ ГАРНИТУРЫ ПАКЕТАМИ, А НЕ ССЫЛКОЙ НА GOOGLE FONTS ────────────────
+ * В прототипе шрифты приходили `<link>` с fonts.googleapis.com. Здесь так
+ * нельзя: тег в `index.html` действует на ВЕСЬ сайт, то есть на страницы,
+ * которым эти гарнитуры не нужны, и добавляет им внешний запрос в критический
+ * путь. Пакеты `@fontsource-variable/*` дают те же начертания локально, а
+ * объявления `@font-face` уезжают в чанк архива вместе с этим файлом.
+ */
+
+/*
+ * Основа манеры — цвет, гарнитуры, поле, клетка и способ считать кегли — лежит
+ * в общем слое: те же величины держит страница кейса, и расходиться им нельзя.
+ */
+@import "./portfolio-ink.css";
+
+:root {
+  /* ─── PRODUCT ──────────────────────────────────────────────────────────── */
+  /* Верх PRODUCT = 198 при высоком окне: поле 60 + строка шапки 18 + этот
+     отступ. На низких окнах сжимается — иначе ряд имён уходит за нижний край. */
+  --pa-title-offset: clamp(40px, 13vh, 120px);
+
+  /* ─── Полоса Archive ───────────────────────────────────────────────────── */
+  /*
+   * Высота считается от кегля PRODUCT, а не от клетки сетки. На 1440 это те же
+   * 180 px и те же три клетки (130 × 1.3846), но дальше пропорция держится:
+   * полоса существует ради слова «Archive» внутри неё, и её высота должна идти
+   * за кеглем, а не за подложкой.
+   *
+   * Прежняя привязка к клетке давала на телефоне полосу 120 px при курсиве 56 —
+   * вдвое выше, чем нужно слову, и она забирала седьмую часть экрана.
+   *
+   * От кегля PRODUCT, а не курсива, намеренно: курсив сам ограничен шириной
+   * места до шахматки, а та считается от полосы. Считать полосу от курсива
+   * значило бы замкнуть цепочку переменных, и CSS обнулил бы их все.
+   */
+  --pa-stripe-height: calc(var(--pa-word-size) * 1.3846);
+  /* Низ PRODUCT против верха полосы: полоса накрывает слово. 18 от кегля 130 —
+     это 0.138 строки; в долях кегля накрытие переносится на любой размер, а
+     прежняя константа 18 на кегле 40 съедала бы почти половину. */
+  --pa-stripe-overlap: calc(var(--pa-word-size) * 0.138);
+  --pa-stripe-edge: 2px;
+  /*
+   * Курсив на 6 % крупнее слова над ним (138 от 130) — но не крупнее, чем
+   * позволяет место левее шахматки. Второй аргумент `min()` и есть это место:
+   * ширина окна минус флаг, минус поле с отступом курсива (1.7 поля), минус
+   * зазор 24, всё делённое на 3.26 — отношение ширины слова «Archive» к кеглю.
+   *
+   * Без этого ограничения курсив заезжал под шахматку: на 320 перекрытие
+   * доходило до 68 px и слово читалось как «Archi_e», на 721 — до 72 px.
+   */
+  --pa-cursive-size: min(
+    calc(var(--pa-word-size) * 1.06),
+    calc((100vw - var(--pa-flag-width) - var(--pa-field) * 1.7 - var(--pa-cursive-gap)) / 3.26)
+  );
+  /*
+   * Зазор от «Archive» до шахматки. На 1440 это 24 px, но на телефоне те же
+   * 24 отнимались от 320 и сжимали курсив до 49 — мельче, чем PRODUCT над ним,
+   * хотя в макете он крупнее. Половина клетки флага там читается так же ясно.
+   */
+  --pa-cursive-gap: clamp(12px, 1.7vw, 24px);
+  /* 42 при поле 60 — 0.7 поля; в долях поля отступ переносится на все размеры. */
+  --pa-cursive-left: calc(var(--pa-field) * 0.7);
+  --pa-cursive-top: calc(var(--pa-cursive-size) * 0.13);
+
+  /* ─── Финишный флаг ────────────────────────────────────────────────────── */
+  /*
+   * ─── КЛЕТКА ШАХМАТКИ СВОЯ, А НЕ КЛЕТКА СЕТКИ ─────────────────────────────
+   * Раньше шахматка дробилась шагом `--pa-cell`, и на телефоне её квадраты
+   * оставались почти десктопного размера (40 против 60) при втрое более узком
+   * экране — флаг читался как пара огромных плашек, а не как финишный флаг.
+   *
+   * Теперь клетка — доля самой полосы: три ряда по высоте, четыре колонки в
+   * ширину. Рисунок флага при этом ОДИН И ТОТ ЖЕ на любом экране — 4 × 3
+   * квадрата, как в макете, — меняется только их размер, вслед за полосой.
+   *
+   * Дробить гуще на узких (4 и 5 рядов) пробовали 2026-08-13 — владелец
+   * отклонил: число квадратов должно остаться прежним, это рисунок знака, а не
+   * узор. На 1440 обе величины совпадают с макетом точно: 180 / 3 = 60,
+   * 60 × 4 = 240.
+   */
+  --pa-flag-cell: calc(var(--pa-stripe-height) / 3);
+  --pa-flag-width: calc(var(--pa-flag-cell) * 4);
+
+  /* ─── Работы ───────────────────────────────────────────────────────────── */
+  /* От низа полосы до метки «работы». */
+  --pa-works-offset: clamp(48px, 17vh, 160px);
+  /* Между меткой и рядом имён. */
+  --pa-works-gap: clamp(24px, 6vh, 60px);
+  /*
+   * ─── КЕГЛЬ ИМЁН СЧИТАЕТСЯ ОТДЕЛЬНО ОТ PRODUCT ───────────────────────────
+   * В ряд идут три слова с двумя разделителями, и ограничение здесь жёстче.
+   * Причём ширину ячейки задаёт НЕ ВСЕГДА имя: у «A3» (1.19 кегля) и «RTK»
+   * (1.82) мета под ними шире самого слова — «B2B-платежи · 2025—н.в.» при
+   * 13 px даёт 197 px и не сжимается, потому что стоит `nowrap`. На кеглях до
+   * 165 ряд держат именно меты, и расчёт по одним словам ошибался на 115 px:
+   * RTK уезжал за правое поле.
+   *
+   * Отсюда состав: 394 px — две широкие меты, 4 px — сами разделители,
+   * 4.46 кегля — «SAMOLET» (единственное слово шире своей меты), 2.2 кегля —
+   * зазоры разделителей (0.55 кегля с каждой стороны, 72 от 130 в макете).
+   *
+   * 🔴 398 px зависит от СОДЕРЖИМОГО: добавится компания или удлинится мета —
+   * число надо пересчитать. Ряд от этого не развалится молча: история витрины
+   * `Ряд имён не выходит за поле` проверяет правый край на 1280 и 1440.
+   */
+  --pa-name-size: clamp(40px, (var(--pa-inner) - 398px) / 6.8, 130px);
+  /* Разделитель между именами: 2px во всю высоту карточки, зазор с каждой
+     стороны — доля кегля, а не константа. */
+  --pa-sep-width: 2px;
+  --pa-sep-gap: calc(var(--pa-name-size) * 0.55);
+  --pa-meta-gap: 9px;
+}
+
+/*
+ * Канва документа на время жизни экрана. Атрибут ставит и снимает сам вид, как
+ * это делает `ShadcnThemeScope` для тем: снаружи маршрута ни фон, ни `overflow`
+ * не тронуты.
+ */
+html[data-portfolio-surface="archive"],
+html[data-portfolio-surface="archive"] body {
+  background-color: var(--pa-ink);
+}
+
+/*
+ * ─── ПРОКРУТКА РАЗРЕШЕНА, ПОКА ОКНО НЕ ДОКАЗАЛО ОБРАТНОЕ ────────────────────
+ * Замысел прототипа — экран ровно в одно окно, без прокрутки. Но `overflow:
+ * hidden` стоял безусловно, и на любом невысоком окне низ просто пропадал:
+ * на 1024×768 служебная строка оказывалась на 173 px ниже края и доступа к ней
+ * не было вовсе — ни колесом, ни клавишей, ни скринридером.
+ *
+ * Поэтому запрет прокрутки теперь условный: он включается только там, где
+ * содержимое заведомо помещается. 940 px — высота, при которой низ строки со
+ * спецификацией (941 px в самой плотной раскладке) ещё внутри окна.
+ */
+html[data-portfolio-surface="archive"],
+html[data-portfolio-surface="archive"] body {
+  overflow: auto;
+}
+
+@media (min-width: 1024px) and (min-height: 940px) {
+  html[data-portfolio-surface="archive"],
+  html[data-portfolio-surface="archive"] body {
+    overflow: hidden;
+  }
+}
+
+.pa-root {
+  position: relative;
+  min-block-size: 100dvh;
+  background-color: var(--pa-ink);
+  color: #fff;
+  font-family: var(--pa-sans);
+}
+
+/* ─── Сетка-подложка ───────────────────────────────────────────────────────
+ * Отсчёт идёт НЕ от края окна, а от поля контейнера: тогда первая линия
+ * совпадает с полем, а клетка остаётся квадратной. Привязка по колонкам
+ * карточек давала прямоугольник 453×88 — шаг по осям расходился.
+ */
+.pa-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, var(--pa-line) 1px, transparent 1px),
+    linear-gradient(var(--pa-line) 1px, transparent 1px);
+  background-size: var(--pa-cell) var(--pa-cell);
+  background-position: var(--pa-field) var(--pa-field);
+  opacity: var(--pa-grid-opacity);
+}
+
+/* ─── Экран ────────────────────────────────────────────────────────────────── */
+
+/*
+ * Высота РАСТУЩАЯ, а не ровно окно. При `block-size: 100dvh` контейнер не
+ * тянулся под содержимое, и на невысоком окне низ просто срезался: на 1280×900
+ * служебная строка оказывалась на 11 px ниже края, а документ оставался ровно
+ * 900 — прокрутка не появлялась, потому что переполнять было нечего. Теперь
+ * окно задаёт минимум, а не потолок.
+ */
+.pa-screen {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  padding: var(--pa-field);
+}
+
+.pa-top {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-top-leading);
+  letter-spacing: 0.06em;
+  color: var(--pa-mute);
+}
+
+/*
+ * Переход на главную. Тем же начертанием, что соседняя строка: в макете это
+ * служебная строка, а не кнопка.
+ *
+ * Тач-цель добирается псевдоэлементом, а не отступами: сама строка стоит по
+ * сетке макета, и padding сдвинул бы её с места. По тексту цель была 13×18 —
+ * вдвое меньше минимума WCAG 2.5.8 (24×24) и втрое меньше комфортных 44.
+ */
+.pa-home {
+  position: relative;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.pa-home::after {
+  content: "";
+  position: absolute;
+  inset-inline: -8px;
+  inset-block: -14px;
+  min-block-size: 44px;
+}
+
+.pa-home:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 6px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pa-home:hover {
+    color: #fff;
+  }
+}
+
+.pa-title {
+  margin-block-start: var(--pa-title-offset);
+}
+
+.pa-word {
+  font-size: var(--pa-word-size);
+  font-weight: 600;
+  line-height: var(--pa-word-leading);
+  letter-spacing: var(--pa-word-tracking);
+  text-transform: uppercase;
+}
+
+/* ─── Полоса Archive ───────────────────────────────────────────────────────
+ * Ступень уходит от левого поля вправо навылет и накрывает низ PRODUCT.
+ * Белая кромка сверху — та самая линия рубежа, по которой едет болид.
+ */
+.pa-stripe {
+  position: relative;
+  z-index: 1;
+  background-color: var(--pa-cobalt);
+  block-size: var(--pa-stripe-height);
+  margin-block-start: calc(-1 * var(--pa-stripe-overlap));
+  margin-inline-end: calc(-1 * var(--pa-field));
+  border-block-start: var(--pa-stripe-edge) solid #fff;
+}
+
+.pa-cursive {
+  position: absolute;
+  inset-inline-start: var(--pa-cursive-left);
+  inset-block-start: var(--pa-cursive-top);
+  font-family: var(--pa-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--pa-cursive-size);
+  line-height: var(--pa-word-leading);
+}
+
+/*
+ * Шахматка: клетка 60, белые ячейки там, где сумма номеров колонки и ряда
+ * чётная. `conic-gradient` плиткой 120×120 даёт ровно этот рисунок, сдвиг на
+ * клетку выставляет фазу как в макете.
+ */
+.pa-flag {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  inline-size: var(--pa-flag-width);
+  block-size: var(--pa-stripe-height);
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background-color: transparent;
+  background-image: conic-gradient(#fff 0 25%, transparent 0 50%, #fff 0 75%, transparent 0);
+  background-size: calc(var(--pa-flag-cell) * 2) calc(var(--pa-flag-cell) * 2);
+  background-position: var(--pa-flag-cell) 0;
+}
+
+/* Флаг — кнопка (пускает заезд), и с клавиатуры до неё доходят. Кольцо внутрь:
+   снаружи оно ушло бы за край окна, полоса стоит навылет. */
+.pa-flag:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -6px;
+}
+
+/* ─── Работы ───────────────────────────────────────────────────────────────── */
+
+.pa-works {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--pa-works-gap);
+  margin-block-start: var(--pa-works-offset);
+}
+
+/* Интерлиньяж задан явно и общий с метой карточки: без него высота строки
+   зависела бы от метрик гарнитуры и ряд имён уезжал бы вниз на пару пикселей
+   при смене шрифтового файла. */
+.pa-works-label {
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-meta-leading);
+  letter-spacing: var(--pa-meta-tracking);
+  color: var(--pa-mute);
+}
+
+/*
+ * Имена стоят ПО СОДЕРЖИМОМУ, а не тремя равными колонками: между ними
+ * разделители во всю высоту карточки.
+ */
+.pa-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.pa-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pa-meta-gap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.pa-name {
+  display: block;
+  font-size: var(--pa-name-size);
+  font-weight: 600;
+  line-height: var(--pa-word-leading);
+  letter-spacing: var(--pa-word-tracking);
+}
+
+/* `nowrap`: без него строка меты ломается и ряд разъезжается по высоте. */
+.pa-meta {
+  display: block;
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-meta-leading);
+  letter-spacing: var(--pa-meta-tracking);
+  color: var(--pa-soft);
+  white-space: nowrap;
+}
+
+.pa-sep {
+  flex: 0 0 auto;
+  inline-size: var(--pa-sep-width);
+  margin-inline: var(--pa-sep-gap);
+  align-self: stretch;
+  background-color: rgba(255, 255, 255, 0.55);
+}
+
+.pa-cell:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 10px;
+}
+
+/*
+ * Отклик на указателе — только для точного указателя: на тач-экране состояние
+ * `:hover` залипает после нажатия. Перечислены конкретные свойства, `all` не
+ * используется.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .pa-name {
+    transition: transform 0.32s var(--pa-ease-out);
+  }
+
+  .pa-meta {
+    transition: color 0.25s ease;
+  }
+
+  .pa-cell:hover .pa-name {
+    transform: translateX(10px);
+  }
+
+  .pa-cell:hover .pa-meta {
+    color: var(--pa-soft-hover);
+  }
+}
+
+.pa-spec {
+  margin-block-start: auto;
+  padding-block-start: var(--pa-field);
+  font-family: var(--pa-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--pa-mute);
+}
+
+/* ─── Синий экран компании ─────────────────────────────────────────────────── */
+
+/*
+ * `overflow-y: auto` — страховка, а не рабочий режим: при трёх кейсах лист
+ * помещается даже в 320×568. Но лист стоит `fixed`, и без неё содержимое
+ * компании с бо́льшим числом кейсов ушло бы за край окна безвозвратно —
+ * прокручивать было бы нечего, документ под листом своей высоты не имеет.
+ */
+/*
+ * ─── ПЛОСКОСТЬ И СОДЕРЖИМОЕ — РАЗНЫЕ СЛОИ ──────────────────────────────────
+ * `clip-path` анимируется только у `.pa-sheet-plane` — пустой цветной подложки.
+ * Текст лежит в `.pa-sheet-inner` и в анимируемый слой не попадает вовсе,
+ * поэтому рисуется одинаково чётко на любом кадре.
+ *
+ * Пока `clip-path` стоял на всём листе, текст неизбежно оказывался внутри слоя:
+ * там браузер отключает субпиксельное сглаживание, и крупное имя компании
+ * выглядело обведённым. Разбор — в шапке `archive-sheet.tsx`.
+ */
+.pa-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+}
+
+.pa-sheet-plane {
+  position: absolute;
+  inset: 0;
+  background-color: var(--pa-cobalt);
+}
+
+.pa-sheet-inner {
+  position: relative;
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
+  padding: var(--pa-field);
+}
+
+/*
+ * Сетки на синем нет — снято в прототипе: подложка привязана к краю окна, а
+ * строки кейсов и поля к контейнеру, поэтому линии пересекались вразнобой.
+ *
+ * Кнопка возврата лежит СВОИМ слоем: при интерлиньяже .9 и кегле 215 строчный
+ * бокс имени заходит на неё сверху, и нажатие не доходило до кнопки.
+ */
+/*
+ * ─── «← ВСЕ РАБОТЫ» СТОИТ НА УРОВНЕ «ПОРТФОЛИО · 2026» ──────────────────────
+ * Обе строки служебные и открывают свой экран, поэтому их верхние края должны
+ * совпадать: человек переключает экраны, и строка не должна прыгать. Отсюда
+ * общий с шапкой интерлиньяж — при разных кеглях (12 и 13) одинаковый `top`
+ * бокса ещё не даёт одинакового верха текста.
+ *
+ * Тач-цель добирается псевдоэлементом, как у `.pa-home`, а НЕ высотой кнопки:
+ * `min-block-size: 44px` с центрированием уводил текст на 14 px вниз — ровно
+ * на этом кнопка и разъезжалась с шапкой (поймано владельцем 2026-08-13).
+ */
+.pa-back {
+  position: relative;
+  z-index: 2;
+  /*
+   * Блочная и по содержимому. Кнопка по умолчанию `inline-block`, а лежит она в
+   * блочном контейнере — и выравнивалась по базовой линии строки, отчего её
+   * верх стоял на 5 px ниже верха контейнера. Именно эти 5 px оставались после
+   * того, как совпали кегль и интерлиньяж.
+   */
+  display: block;
+  inline-size: fit-content;
+  padding: 0 10px 0 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--pa-mono);
+  /* Белый на кобальте: 0.75 альфы давали 4.3:1 — ниже порога 4.5 для текста
+     этого кегля. Сплошной белый на #044AB3 даёт 7.97:1. */
+  color: #fff;
+  /* Кегль и интерлиньяж — как у шапки главного экрана: при 12 против 13 верх
+     текста расходился на 6 px даже при совпадающем верхе бокса. */
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-top-leading);
+  letter-spacing: 0.06em;
+  text-align: start;
+  opacity: 0.85;
+}
+
+.pa-back::after {
+  content: "";
+  position: absolute;
+  inset-inline: -10px;
+  inset-block: -13px;
+  min-block-size: 44px;
+}
+
+.pa-back:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pa-back:hover {
+    opacity: 1;
+  }
+}
+
+/*
+ * Кегль считается от доступной ширины по самому длинному имени («SAMOLET»,
+ * 4.45 кегля), а не от `vw`. Прежний нижний предел 72 px был больше, чем
+ * помещается: на 320 слово занимало 320 px при 280 доступных и уезжало за
+ * правое поле. Делитель 4.6 вместо 4.45 — тот самый запас, который не даёт
+ * слову упереться в край.
+ */
+/*
+ * ─── СГЛАЖИВАНИЕ ЗАФИКСИРОВАНО, ЧТОБЫ БУКВЫ НЕ МЕНЯЛИ ТОЛЩИНУ ──────────────
+ * Пока элемент анимируется, браузер держит его в композитном слое и рисует
+ * текст серым сглаживанием; вне слоя — субпиксельным. На кегле 215 разница
+ * видна глазами: имя выходило тонким и «толстело» к концу анимации.
+ *
+ * Здесь серое сглаживание включено ПОСТОЯННО — переключаться становится нечему,
+ * и прозрачность можно анимировать спокойно. Буквы чуть тоньше, зато одинаковы
+ * на каждом кадре; на цветном фоне это ещё и убирает цветную бахрому по краям,
+ * которую даёт субпиксельный режим.
+ */
+.pa-huge {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: clamp(40px, var(--pa-inner) / 4.6, 215px);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  margin-block-start: 18px;
+}
+
+.pa-sub {
+  margin-block-start: 14px;
+  font-family: var(--pa-mono);
+  font-size: clamp(12px, 1.1vw, 14px);
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+/* Кейсы стоят в середине экрана, строками во всю ширину. */
+.pa-cases {
+  margin-inline: calc(-1 * var(--pa-field));
+  border-block-start: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/*
+ * Минимальная высота 56 — тач-цель. По содержимому строка выходила 44-48 px на
+ * узком экране: WCAG 2.5.8 требует 24, но палец промахивается и по 44.
+ */
+.pa-case {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 26px);
+  inline-size: 100%;
+  min-block-size: 56px;
+  padding: 18px var(--pa-field);
+  border: 0;
+  border-block-end: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.pa-case-index {
+  inline-size: 26px;
+  font-family: var(--pa-mono);
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.pa-case-title {
+  font-size: clamp(20px, 2.3vw, 32px);
+  letter-spacing: -0.01em;
+}
+
+.pa-case-impact {
+  margin-inline-start: auto;
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  opacity: 0.85;
+}
+
+/* Инверсия строки: белая плашка, синие буквы. */
+.pa-case {
+  transition:
+    background-color 0.3s var(--pa-ease-out),
+    color 0.3s var(--pa-ease-out);
+}
+
+.pa-case-index,
+.pa-case-impact {
+  transition: opacity 0.3s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pa-case-title {
+    transition: transform 0.34s var(--pa-ease-out);
+  }
+
+  .pa-case:hover .pa-case-title {
+    transform: translateX(10px);
+  }
+}
+
+.pa-case:hover,
+.pa-case:focus-visible {
+  background-color: #fff;
+  color: var(--pa-cobalt);
+  outline: 0;
+}
+
+.pa-case:hover .pa-case-index,
+.pa-case:hover .pa-case-impact,
+.pa-case:focus-visible .pa-case-index,
+.pa-case:focus-visible .pa-case-impact {
+  opacity: 1;
+}
+
+.pa-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(20px, 4vw, 56px);
+}
+
+.pa-fact-value {
+  font-family: var(--pa-mono);
+  font-size: clamp(32px, 4.2vw, 60px);
+  font-weight: 300;
+  line-height: 1;
+}
+
+.pa-fact-caption {
+  margin-block-start: 8px;
+  font-family: var(--pa-mono);
+  font-size: 12px;
+  opacity: 0.75;
+  max-inline-size: 24ch;
+}
+
+/* ─── Заезд — пасхалка на финишном флаге ───────────────────────────────────
+ * Отдельной трассы нет: болид едет по той самой полосе Archive, что стоит на
+ * странице. Содержимое при этом остаётся на месте — заезд идёт поверх готовой
+ * страницы и ничего не заслоняет.
+ *
+ * Кнопки «↻ заезд» здесь БОЛЬШЕ НЕТ (2026-08-13). Она стояла `position: fixed`
+ * в правом нижнем углу и на десктопе перекрывала мету RTK, а на мобильной
+ * ширине — сами имена. Запуск остался один — нажатие на шахматку.
+ */
+
+.pa-hud {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: calc(100% + 18px);
+  display: flex;
+  gap: 16px;
+  font-family: var(--pa-mono);
+  font-size: 12px;
+  letter-spacing: var(--pa-meta-tracking);
+  color: var(--pa-mute);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.pa-hud[data-on="true"] {
+  opacity: 1;
+}
+
+.pa-lights {
+  display: flex;
+  gap: 8px;
+}
+
+.pa-lamp {
+  display: block;
+  inline-size: 12px;
+  block-size: 12px;
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.pa-lamp[data-state="on"] {
+  background-color: #e11d2e;
+}
+
+.pa-lamp[data-state="go"] {
+  background-color: #27c46b;
+}
+
+.pa-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * ─── ПРОЕЗД — ИМЕННО CSS-АНИМАЦИЯ ──────────────────────────────────────────
+ * Обёртка едет по полосе `transform: translateX`, спрайт внутри только
+ * масштабируется. Анимацию ведёт CSS, а не библиотека: в прототипе попытка
+ * анимировать свойство `left` схлопывала проезд в прыжок. Финиш ловится
+ * событием `animationend` этой же анимации, поэтому её имя и длительность —
+ * часть контракта с кодом (`use-race-boot.ts`).
+ */
+.pa-car-wrap {
+  position: absolute;
+  inset-block-end: 14px;
+  inset-inline-start: 0;
+  z-index: 2;
+  inline-size: 6px;
+  block-size: 6px;
+  transform: translateX(-260px);
+  will-change: transform;
+  opacity: 0;
+}
+
+.pa-car-wrap[data-on="true"] {
+  opacity: 1;
+}
+
+.pa-car-wrap[data-drive="true"] {
+  animation: pa-drive var(--pa-race, 4.5s) cubic-bezier(0.3, 0.02, 0.2, 1) forwards;
+}
+
+@keyframes pa-drive {
+  from {
+    transform: translateX(-260px);
+  }
+  to {
+    transform: translateX(var(--pa-race-to, 1200px));
+  }
+}
+
+/* ─── ТРИ ДИАПАЗОНА КАРКАСА ────────────────────────────────────────────────
+ * Кегли считаются формулами и меняются плавно, поэтому брейкпоинты остались
+ * только там, где меняется САМА раскладка, а не размер:
+ *
+ *   < 640      имена колонкой, поле 20, клетка 40
+ *   640-1199   имена колонкой, поле 40, клетка 48   (планшет и узкий ноут)
+ *   >= 1200    имена рядом с разделителями, поле 60, клетка 60
+ *
+ * Граница ряда — 1200, а не прежние 720. Ряд из трёх имён с двумя метами
+ * требует 398 px постоянной ширины плюс 6.66 кегля: на 1024 это оставляет
+ * кеглю 76 px, и слово становится вровень с подписью под ним — ряд перестаёт
+ * читаться как заголовочный. На 1200 кегль уже 102, на 1440 — макетные 130.
+ * Ниже 1200 те же три имени идут колонкой и получают кегль по самому длинному
+ * слову: на 834 это 130 против 74 в ряду.
+ */
+
+/* ─── Планшет и узкий ноут ─────────────────────────────────────────────────── */
+
+@media (max-width: 1199px) {
+  :root {
+    /* Поле и клетка приходят из общего слоя; здесь — только своё. Колонка:
+       ограничение задаёт самое длинное имя (SAMOLET, 4.46 кегля), а не сумма
+       трёх. Делитель 4.6 — тот же запас, что у имени на синем экране: без него
+       слово встаёт ровно в поле и на 640 вылезало за него на 2 px. */
+    --pa-name-size: clamp(48px, var(--pa-inner) / 4.6, 130px);
+  }
+
+  .pa-row {
+    flex-direction: column;
+    gap: clamp(20px, 3.5vh, 36px);
+  }
+
+  .pa-sep {
+    display: none;
+  }
+}
+
+/* ─── Мобильная ширина ─────────────────────────────────────────────────────── */
+
+@media (max-width: 639px) {
+  /* Мета переносится: на 320 строка «B2B-платежи · 2025—н.в.» в одну строку
+     шире поля, а `nowrap` из десктопной раскладки её бы вытолкнул за край. */
+  .pa-meta {
+    white-space: normal;
+  }
+}
+
+/* ─── ЗДЕСЬ НЕТ БЛОКА prefers-reduced-motion, И ЭТО РЕШЕНИЕ ────────────────
+ * До 2026-08-13 тут стоял тотальный сброс `animation/transition-duration:
+ * .01ms !important` на всё поддерево `.pa-root`. На машине владельца эта
+ * системная настройка включена, и экран показывал себя статикой: синие экраны
+ * возникали без спуска, полоса не жила. Промежуточный вариант — оставить
+ * затухание вместо движения — владелец тоже отклонил: «они просто появляются».
+ *
+ * Решение владельца: экран сохраняет своё движение при любой системной
+ * настройке. Отступление от WCAG 2.3.3 осознанное и ограниченное: движений на
+ * экране два — спуск синей плоскости 0.72 с по нажатию и проявление блоков при
+ * заходе, — оба короткие, без параллакса, повторов и мигания. Заезд болида,
+ * единственное крупное перемещение, при заходе не запускается вовсе и ждёт
+ * прямого нажатия на шахматку.
+ *
+ * Guardrail проекта (`styles.css`, `[data-shadcn-theme] *`) до этого экрана не
+ * достаёт: `.pa-root` живёт вне контейнера темы — проверено в браузере, у
+ * `html` только `lang` и `data-portfolio-surface`. Поэтому чтобы вернуть
+ * движение, достаточно было убрать локальный блок, а сам guardrail остался
+ * нетронутым и продолжает работать на остальном сайте.
+ */
