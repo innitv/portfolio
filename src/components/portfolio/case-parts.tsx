@@ -177,7 +177,8 @@ export interface CaseSectionProps {
  */
 export function CaseSection({ index, section }: CaseSectionProps) {
   const images = sectionImages(section)
-  const terms = section.items ? listUsesTerms(section.items) : false
+  const items = section.items
+  const terms = items ? listUsesTerms(items) : false
 
   return (
     <section>
@@ -198,9 +199,9 @@ export function CaseSection({ index, section }: CaseSectionProps) {
         <p className="pf-measure pf-prose text-muted-foreground">{section.quote}</p>
       ) : null}
 
-      {section.items ? (
+      {items ? (
         <ul className="pf-measure pf-prose text-muted-foreground">
-          {section.items.map((item) => (
+          {items.map((item) => (
             <li key={item}>
               <TermLeadIn enabled={terms} text={item} />
             </li>

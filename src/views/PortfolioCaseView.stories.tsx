@@ -55,23 +55,73 @@ export const FullPage: Story = {
 
     // Страница уводит дальше, а не обрывается: соседний кейс той же компании.
     await expect(canvas.getByTestId("pc-next")).toBeVisible()
+
+    /*
+      ─── РАЗМЕТКА РАЗДЕЛА: МЕТКА → ТЕЗИС → АБЗАЦЫ ───────────────────────────
+      Правка владельца 2026-08-14 по макету 88:248: под служебной меткой стоит
+      не название раздела, а ПЕРВОЕ ПРЕДЛОЖЕНИЕ его содержания, набранное
+      крупно. Проверяются обе половины и их различие — иначе разметка тихо
+      выродится обратно в один заголовок, повторяющий метку.
+
+      Сторож на лиды пунктов (`.pc-item-lead`) снят вместе с самими лидами:
+      час назад у каждого пункта был мини-заголовок, владелец их отменил.
+    */
+    const kickers = [...canvasElement.querySelectorAll(".pc-kicker")]
+    await expect(kickers.length, "Меток разделов нет").toBeGreaterThan(3)
+
+    for (const kicker of kickers) {
+      const part = kicker.nextElementSibling
+      await expect(part?.classList.contains("pc-part")).toBe(true)
+      const label = kicker.textContent?.trim() ?? ""
+      const title = part?.textContent?.trim() ?? ""
+      await expect(title.length, `Раздел «${label}» без тезиса`).toBeGreaterThan(0)
+      await expect(title, `Тезис раздела «${label}» повторяет метку`).not.toBe(label)
+    }
+
+    /*
+      ─── ТЕЛО НАБРАНО ОСНОВНОЙ ГАРНИТУРОЙ, А НЕ СЛУЖЕБНОЙ ──────────────────
+      Моноширинную здесь пробовали по макету 88:248 и владелец её отменил в тот
+      же день: «оставь тогда как было с манропе». Моноширинная остаётся языком
+      служебных строк — меток, шапки, подписей, — а тело кейса читают длинно.
+
+      Проверяется РЕЗУЛЬТАТ у абзаца, а не значение переменной: подмена
+      `--pc-text-font` и гарнитура по месту одинаково видны здесь.
+    */
+    const paragraph = canvasElement.querySelector(".pc-section-text")
+    const family = paragraph ? getComputedStyle(paragraph).fontFamily : ""
+    await expect(family, `Тело набрано не основной гарнитурой: ${family}`).toContain("Manrope")
+
+    /*
+      ─── ПУНКТЫ БЕЗ МАРКЕРОВ ───────────────────────────────────────────────
+      Кобальтовые квадраты прожили час и сняты владельцем по макету. Маркер
+      рисовался псевдоэлементом, поэтому и проверяется он: `list-style` его
+      отсутствие не покажет.
+    */
+    const item = canvasElement.querySelector("ul.pc-section-text li")
+    if (item) {
+      const marker = getComputedStyle(item, "::before").content
+      await expect(marker, `У пункта вернулся маркер: ${marker}`).toBe("none")
+    }
   },
 }
 
 /**
- * Весь текст стоит на одной силовой линии чуть левее центра.
+ * Текстовые блоки чередуются: треть ширины → левое поле → треть.
  *
- * История сторожит приём образца `wemakefab.ru`, где линия проходит по 35 %
- * ширины. Путь до него занял день и четыре промаха: две равные колонки ставили
- * текст ровно в середину («смотришь только в правую часть»), узкая колонка
- * увела на четверть, доля 37.5 % дала 40 %, снятие колонки фактов прижало текст
- * к полю («я разве просил прижать к левой стороне»).
+ * Приём владельца по макету 88:248 (2026-08-14). Он заменил силовую линию, на
+ * которой ВЕСЬ текст стоял одной вертикалью 34 % (приём `wemakefab.ru`, принят
+ * 13 августа и прожил сутки; путь до него занял день и четыре промаха).
  *
- * Проверяется не одно число, а то, что линия ОДНА: тезис, абзац, показы и
- * таблица начинаются с одной вертикали. Разъедься они — страница развалится, и
- * поймать это глазами на восьми тысячах пикселей трудно.
+ * Сторожатся три вещи разом, потому что сломать приём можно тремя способами:
+ *
+ * 1. Вертикалей ровно ДВЕ. Разъедься блоки по трём-четырём — страница
+ *    развалится, и на восьми тысячах пикселей это не поймать глазами.
+ * 2. Одна из них — левое поле, с которого начинаются кадры. Сдвинь кадр вместе
+ *    с текстом, и разницы между блоками не станет, а с ней и приёма.
+ * 3. Чередование идёт через один. Пропущенный или лишний блок сдвигает всю
+ *    последовательность, и соседние блоки встают на одну вертикаль.
  */
-export const ForceLine: Story = {
+export const Alternation: Story = {
   args: {
     caseStudy: study,
     company: a3,
@@ -79,7 +129,7 @@ export const ForceLine: Story = {
     onOpenCase: fn(),
     onOpenCompany: fn(),
   },
-  name: "Текст стоит на силовой линии",
+  name: "Текстовые блоки чередуются",
   play: async ({ canvasElement }) => {
     const root = canvasElement.querySelector<HTMLElement>(".pc-root")
     if (!root) throw new Error("Страница кейса не собралась")
@@ -88,27 +138,29 @@ export const ForceLine: Story = {
     const width = root.getBoundingClientRect().width
     const at = (node: Element) => Math.round(node.getBoundingClientRect().left - origin)
 
-    const parts = [".pc-lead", ".pc-section-text", ".pc-part", ".pc-rows", ".pc-flow .pc-shots"]
-      .map((selector) => canvasElement.querySelector(selector))
-      .filter((node): node is Element => Boolean(node))
+    const blocks = [...canvasElement.querySelectorAll(".pc-flow > .pc-section")]
+    await expect(blocks.length, "Текстовых блоков на странице нет").toBeGreaterThan(4)
 
-    const lines = [...new Set(parts.map(at))]
-    await expect(lines, `Содержимое разъехалось по вертикалям: ${lines.join(", ")}`).toHaveLength(1)
+    const lines = [...new Set(blocks.map(at))].sort((first, second) => first - second)
+    await expect(
+      lines,
+      `Блоки разъехались по вертикалям: ${lines.join(", ")}`,
+    ).toHaveLength(2)
 
-    // Линия чуть левее центра: у образца 35 % ширины, допуск 28-45 %.
-    const share = lines[0] / width
-    await expect(share, `Линия на ${Math.round(share * 100)} % ширины`).toBeGreaterThan(0.28)
-    await expect(share).toBeLessThan(0.45)
+    // Ближняя вертикаль — левое поле: с него же начинаются кадры.
+    const shots = canvasElement.querySelector(".pc-flow .pc-shots")
+    if (!shots) throw new Error("Кадров в потоке нет — сравнивать поле не с чем")
+    await expect(lines[0], `Ближняя вертикаль ${lines[0]} ≠ поле ${at(shots)}`).toBe(at(shots))
 
-    /*
-     * Заголовок раздела стоит НАД своим текстом, а не сбоку от него. Выносить
-     * его в левую колонку пробовали — владелец вернул в поток: оторванный от
-     * текста, он читался отдельным столбцом оглавления.
-     */
-    const part = canvasElement.querySelector(".pc-part")
-    const text = canvasElement.querySelector(".pc-section-text")
-    if (part && text) {
-      await expect(at(part)).toBe(at(text))
+    // Дальняя — на трети ширины: в макете 671 из 1920, то есть 35 %.
+    const share = lines[1] / width
+    await expect(share, `Дальняя вертикаль на ${Math.round(share * 100)} % ширины`).toBeGreaterThan(0.3)
+    await expect(share).toBeLessThan(0.42)
+
+    // Чередование не сбилось: нечётные блоки на трети, чётные у поля.
+    for (const [index, block] of blocks.entries()) {
+      const onThird = at(block) === lines[1]
+      await expect(onThird, `Блок ${index + 1} сбил чередование`).toBe(index % 2 === 0)
     }
 
     // Сетки-подложки на светлой странице нет: она спорит со строками текста.

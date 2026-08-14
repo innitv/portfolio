@@ -29,6 +29,8 @@ type Story = StoryObj
 const a3 = companies[0]
 const rtk = companies[1]
 const dashboard = a3.cases[0]
+/** Кейс со сплошными абзацами — для истории `ArticleWithProse`. */
+const flowSections = caseSections(a3.cases[1])
 const sections = caseSections(dashboard)
 
 /** Голова левой колонки: категория, заголовок, лид, кадр и сетка метрик. */
@@ -64,9 +66,9 @@ export const Intro: Story = {
  */
 export const ArticleWithList: Story = {
   play: async ({ canvasElement }) => {
-    // «Быстрые действия. Если вынести…» — акцент на термине, фраза целая.
+    // «Платёжные KPI. Если показатели видны…» — акцент на термине, фраза целая.
     const strong = [...canvasElement.querySelectorAll("li strong")].map((node) => node.textContent)
-    await expect(strong).toContain("Быстрые действия.")
+    await expect(strong).toContain("Платёжные KPI.")
     // Маркер списка приходит от плагина типографики: без него пункты
     // рендерятся голым столбцом строк, и сборка при этом молчит.
     const list = canvasElement.querySelector(".pf-article ul")
@@ -84,7 +86,14 @@ export const ArticleWithList: Story = {
   tags: ["vr-page"],
 }
 
-/** Раздел с прозой: абзацы без акцентов, колонка 640. */
+/**
+ * Раздел с прозой: абзацы без акцентов, колонка 640.
+ *
+ * Источник — кейс «Оптимизация флоу», а не дашборд: у дашборда прозы больше
+ * нет. Единственный его раздел со сплошным текстом («Итоги») снят владельцем
+ * 2026-08-14 как пересказ соседних, и роль финала на странице держат
+ * кобальтовая плоскость «Итог» и переход на соседний кейс.
+ */
 export const ArticleWithProse: Story = {
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelectorAll("strong")).toHaveLength(0)
@@ -95,28 +104,46 @@ export const ArticleWithProse: Story = {
   },
   render: () => (
     <PortfolioStoryCanvas width={692}>
-      <CaseArticle sections={[sections[7]]} />
+      <CaseArticle sections={[flowSections[0]]} />
     </PortfolioStoryCanvas>
   ),
   tags: ["vr-page"],
 }
 
 /**
- * Раздел «Метрики успеха»: пункты вида «Activation: рост доли…» — те самые, из
- * которых собрана сетка чисел наверху. Полное предложение остаётся здесь:
- * наверху сводка, в разделе — описание действия.
+ * Раздел «Метрики успеха»: пункты вида «Activation: доля… растёт на 15–25%» —
+ * те самые, из которых собрана сетка чисел наверху страницы.
+ *
+ * 🔴 Проверяется ПОРЯДОК, а не только наличие. `caseMetrics` читает раздел
+ * сверху вниз и первое найденное число уносит на синий экран `/archive` первой
+ * величиной компании A3 — вместе с подписью «Activation». Уедет Activation
+ * ниже или заедет цифра в тезис раздела — на плакате встанет чужая метрика, и
+ * ни сборка, ни типы этого не заметят.
  */
 export const ArticleWithMetrics: Story = {
   play: async ({ canvasElement }) => {
-    // Проверяется именно ЦЕЛОСТНОСТЬ предложения: наверху страницы из него
-    // подняты «15–25%» и «Activation», но здесь оно обязано стоять полностью.
-    // `getByText` тут не годится — пункт разбит тегом `strong` на два узла.
+    /*
+      Тезис раздела — без цифр: иначе подписью величины на `/archive` станет
+      обрывок фразы вместо имени метрики. Номер раздела («01») в счёт не идёт —
+      он живёт в своём `span` и в данные не входит, поэтому берётся последний
+      текстовый узел заголовка, а не весь его текст.
+    */
+    const heading = canvasElement.querySelector(".pf-article h2")
+    const thesis = [...(heading?.childNodes ?? [])]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent)
+      .join("")
+    await expect(thesis).not.toMatch(/\d/)
+
+    // Пункты целиком. `getByText` тут не годится: пункт разбит `strong` на два
+    // узла, а проверяется именно целостность предложения.
     const items = [...canvasElement.querySelectorAll(".pf-article li")].map(
       (node) => node.textContent,
     )
     await expect(items[0]).toBe(
-      "Activation: рост доли пользователей, которые выполнили целевое действие после входа в кабинет, на 15–25%.",
+      "Activation: доля пользователей, выполнивших целевое действие после входа в кабинет, растёт на 15–25%.",
     )
+    await expect(items[1]).toContain("Time to Action")
   },
   render: () => (
     <PortfolioStoryCanvas width={692}>

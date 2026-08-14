@@ -59,8 +59,30 @@ function sectionShots(section: CaseDetailSection) {
  * У образца тезис — одно-два предложения; длинный абзац крупным кеглем занял бы
  * пол-экрана и перестал быть акцентом. 180 знаков — примерно две строки при
  * мере в 28 знаков, на которую настроен `.pc-lead`.
+ *
+ * Приём остался для семи кейсов, ещё не размеченных по макету 88:248: у них
+ * тезиса в данных нет, и его приходится угадывать по первому абзацу. У
+ * размеченного раздела (`kicker` + содержательный `title`) тезис задан явно, и
+ * угадывать нечего.
  */
 const LEAD_MAX = 180;
+
+/**
+ * ─── ТЕКСТОВЫЕ БЛОКИ ЧЕРЕДУЮТСЯ ПО ГОРИЗОНТАЛИ ────────────────────────────────
+ * Решение владельца 2026-08-14 по макету 88:248: первый блок стоит на трети
+ * ширины, второй от левого поля, третий снова на трети — и так далее. Кадры
+ * между ними всегда идут от левого поля во всю ширину, поэтому текст то
+ * совпадает с их краем, то отступает; это и есть ось макета.
+ *
+ * Приём заменил прежнюю силовую линию (весь текст на одной вертикали 34 %,
+ * приём `wemakefab.ru`, принят 13 августа и прожил сутки).
+ *
+ * Чередование считается по порядку ТЕКСТОВЫХ блоков, а не по индексу раздела:
+ * между ними стоят кадры, и они на чётность не влияют.
+ */
+function shifted(textBlock: number): boolean {
+  return textBlock % 2 === 0;
+}
 
 export function PortfolioCaseView({
   caseStudy,
@@ -200,39 +222,75 @@ export function PortfolioCaseView({
               раздела «Задача», заголовки разделов данных — `pc-part`, остальное
               абзацы и списки основным кеглем.
             */}
-            <p className="pc-lead" data-testid="pc-lead">
-              {caseStudy.summary}
-            </p>
-            <p className="pc-section-text">{caseStudy.context}</p>
+            <section className="pc-section" data-shift={shifted(0)}>
+              <p className="pc-lead" data-testid="pc-lead">
+                {caseStudy.summary}
+              </p>
+              <p className="pc-section-text">{caseStudy.context}</p>
+            </section>
 
-            <section className="pc-section" data-testid="pc-problem">
+            <section
+              className="pc-section"
+              data-shift={shifted(1)}
+              data-testid="pc-problem"
+            >
               <div className="pc-label">Задача</div>
               <p className="pc-lead">{caseStudy.problem}</p>
             </section>
 
-            {sections.map((section) => {
+            {sections.map((section, index) => {
               const shots = sectionShots(section);
               /*
-                Первый абзац раздела идёт тезисом, если он короткий. Так поток
-                разбивается перепадом кегля каждые несколько абзацев — у образца
-                тезис приходится на каждые семь-восемь блоков текста. Длинный
-                первый абзац остаётся обычным: крупным кеглем он занял бы
-                пол-экрана и перестал быть акцентом.
+                Размеченный раздел несёт тезис в самом заголовке: `title` — это
+                первое предложение содержания, набранное крупно (макет 88:248).
+                Тогда угадывать нечего.
+
+                У семи ещё не переразмеченных кейсов заголовок служебный
+                («Контекст»), и тезисом становится первый короткий абзац — так
+                поток разбивается перепадом кегля каждые несколько абзацев.
+                Длинный первый абзац остаётся обычным: крупным кеглем он занял
+                бы пол-экрана и перестал быть акцентом.
               */
+              const marked = Boolean(section.kicker);
               const [first, ...restBody] = section.body ?? [];
-              const leadFirst = Boolean(first && first.length <= LEAD_MAX);
+              const leadFirst =
+                !marked && Boolean(first && first.length <= LEAD_MAX);
               const paragraphs = leadFirst ? restBody : section.body ?? [];
 
               return (
                 <React.Fragment key={section.title}>
-                  <section className="pc-section">
-                    <h2 className="pc-part">{section.title}</h2>
+                  <section
+                    className="pc-section"
+                    data-shift={shifted(index + 2)}
+                  >
+                    {/*
+                      Метка над тезисом: «Контекст», «Цель», «Итоги». Она
+                      отвечает на вопрос «что это за блок», а крупная строка под
+                      ней — уже содержание, а не название раздела.
+                    */}
+                    {section.kicker ? (
+                      <div className="pc-kicker">{section.kicker}</div>
+                    ) : null}
+                    <h2
+                      className="pc-part"
+                      data-thesis={marked}
+                      data-tight={marked}
+                    >
+                      {section.title}
+                    </h2>
                     {leadFirst ? <p className="pc-lead">{first}</p> : null}
                     {paragraphs.map((paragraph) => (
                       <p className="pc-section-text" key={paragraph}>
                         {paragraph}
                       </p>
                     ))}
+                    {/*
+                      Пункты — абзацы, а не список: ни маркеров, ни собственных
+                      заголовков у них нет (макет 88:248, решение владельца
+                      2026-08-14). Разметку `{lead, text}` пробовали часом
+                      раньше и сняли вместе с маркерами — механика удалена,
+                      чтобы не осталось второго способа набрать то же самое.
+                    */}
                     {section.items ? (
                       <ul className="pc-section-text">
                         {section.items.map((item) => (
