@@ -2,6 +2,8 @@ import * as React from "react"
 
 import { AnimatePresence, motion } from "framer-motion"
 
+import { DURATION, EASE, TIMING } from "@/components/portfolio/motion"
+
 import type { ArchiveCompany } from "@/views/portfolio-archive.model"
 
 /**
@@ -37,8 +39,8 @@ import type { ArchiveCompany } from "@/views/portfolio-archive.model"
  * крупное перемещение — при заходе не запускается вовсе.
  */
 
-/** Длительность спуска плоскости, секунды. */
-const SHEET_IN = 0.72
+/** Длительность спуска плоскости, секунды. Значение — в `motion.ts`. */
+const SHEET_IN = DURATION.sheetIn
 
 /**
  * Длительность ухода плоскости, секунды. Принято владельцем 2026-08-14.
@@ -52,21 +54,21 @@ const SHEET_IN = 0.72
  * но это не одно решение на двоих: у занавеса своя история подбора
  * (`sheet-curtain.tsx`), и менять их надо порознь.
  */
-const SHEET_OUT = 0.72
+const SHEET_OUT = DURATION.sheetOut
 
 /** Пауза перед первым элементом содержимого, секунды. */
-const ITEMS_DELAY = 0.38
+const ITEMS_DELAY = TIMING.itemsDelay
 
 /** Шаг лесенки, секунды. */
-const ITEMS_STAGGER = 0.06
+const ITEMS_STAGGER = TIMING.itemsStagger
 
 /** Длительность появления элемента, секунды. */
-const ITEM_DURATION = 0.52
+const ITEM_DURATION = DURATION.item
 
 /** Сдвиг элемента при появлении, px. */
 const ITEM_OFFSET = 20
 
-const EASE_IN_SHEET = [0.4, 0, 0.15, 1] as const
+const EASE_IN_SHEET = EASE.inSheet
 /**
  * Кривая ухода — та же, что у занавеса на кейс, и по той же причине.
  *
@@ -79,8 +81,8 @@ const EASE_IN_SHEET = [0.4, 0, 0.15, 1] as const
  * доезжание. Кривая уже принята владельцем на занавесе, поэтому здесь она не
  * подбирается заново.
  */
-const EASE_OUT_SHEET = [0.33, 1, 0.68, 1] as const
-const EASE_ITEM = [0.16, 1, 0.3, 1] as const
+const EASE_OUT_SHEET = EASE.outSheet
+const EASE_ITEM = EASE.item
 
 /**
  * ─── СОДЕРЖИМОЕ УХОДИТ ТЕМ ЖЕ КЛИПОМ, ЧТО И ПЛОСКОСТЬ ───────────────────────
@@ -131,11 +133,31 @@ export interface ArchiveSheetProps {
    * состояние страницы, и анимировать его нечем.
    */
   instant?: boolean
+  /**
+   * Содержимое уже показано: ни спуска, ни лесенки — лист стоит готовым.
+   *
+   * 🔴 Нужен ровно в одном месте: под уходящим занавесом возврата. Там лесенку
+   * уже отыграл сам занавес — это тот же лист, приехавший поверх кейса, — и
+   * повторять её здесь значило бы моргнуть текстом на стыке.
+   *
+   * Во всех остальных случаях лесенка идёт: правило владельца «один и тот же
+   * экран открывается одинаково, откуда бы ни пришли».
+   */
+  revealed?: boolean
+  /** Спуск плоскости закончен — экран можно передавать маршруту. */
+  onOpened?: () => void
   onClose: () => void
   onOpenCase?: (companyId: ArchiveCompany["id"], caseId: string) => void
 }
 
-export function ArchiveSheet({ company, instant, onClose, onOpenCase }: ArchiveSheetProps) {
+export function ArchiveSheet({
+  company,
+  instant,
+  revealed,
+  onOpened,
+  onClose,
+  onOpenCase,
+}: ArchiveSheetProps) {
   const backRef = React.useRef<HTMLButtonElement | null>(null)
 
   React.useEffect(() => {
@@ -161,23 +183,35 @@ export function ArchiveSheet({ company, instant, onClose, onOpenCase }: ArchiveS
     🔴 Лесенка содержимого идёт ВСЕГДА, даже когда плоскость уже открыта.
 
     Открытие экрана компании — это два движения подряд: приходит цвет, за ним
-    лесенкой встаёт текст. При заходе по адресу цвет привёл занавес поверх
-    кейса, а лесенка обязана отыграть здесь — иначе один и тот же экран
-    открывается по-разному в зависимости от того, откуда пришли, и владелец
-    поймал это сразу: «почему разные анимации» (2026-08-14).
+    лесенкой встаёт текст. Один и тот же экран обязан открываться одинаково,
+    откуда бы ни пришли, — владелец поймал разницу дважды: «почему разные
+    анимации» (2026-08-14) и «с главной текст быстро появляется, а с кейса
+    медленно» (2026-08-15).
 
-    Разница только в отсчёте: после занавеса плоскость уже на месте, поэтому
-    ждать её незачем и пауза `ITEMS_DELAY` не нужна.
+    Второй раз причина была в ОТСЧЁТЕ. С главной движения накладываются: цвет
+    едет 0,72 с, текст идёт поверх него с 0,38 — и встаёт ровно к приходу
+    плоскости (замер: имя на 741 мс). На возврате они шли подряд: сначала
+    пустая плоскость закрывала кейс, и лишь потом стартовала лесенка — имя
+    вставало на 1072 мс. Лечится не здесь, а в маршруте: теперь на возврате
+    приезжает этот же лист целиком, со своим спуском и лесенкой, поэтому оба
+    пути идут одним движением.
+
+    `revealed` — единственное исключение: лист под уходящим занавесом уже
+    отыграл своё и стоит готовым.
   */
-  const item = (index: number, shift = true) => ({
-    animate: { opacity: 1, y: 0 },
-    initial: { opacity: 0, y: shift ? ITEM_OFFSET : 0 },
-    transition: {
-      delay: (instant ? 0 : ITEMS_DELAY) + index * ITEMS_STAGGER,
-      duration: ITEM_DURATION,
-      ease: EASE_ITEM,
-    },
-  })
+  const item = (index: number, shift = true) => {
+    if (revealed) return { animate: { opacity: 1, y: 0 }, initial: { opacity: 1, y: 0 } }
+
+    return {
+      animate: { opacity: 1, y: 0 },
+      initial: { opacity: 0, y: shift ? ITEM_OFFSET : 0 },
+      transition: {
+        delay: (instant ? 0 : ITEMS_DELAY) + index * ITEMS_STAGGER,
+        duration: ITEM_DURATION,
+        ease: EASE_ITEM,
+      },
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -221,6 +255,7 @@ export function ArchiveSheet({ company, instant, onClose, onOpenCase }: ArchiveS
               главный экран вместо работ компании.
             */
             initial={{ clipPath: instant ? OPEN : CLOSED }}
+            onAnimationComplete={onOpened}
             transition={instant ? { duration: 0 } : { duration: SHEET_IN, ease: EASE_IN_SHEET }}
           />
 

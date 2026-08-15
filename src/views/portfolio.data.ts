@@ -123,9 +123,16 @@ export const profile = {
   lead: "Проектирую B2B-платежи, сервисные кабинеты, подписки и proptech-инструменты, где важны сценарии, статусы, данные и понятные действия.",
 } as const
 
+/*
+ * 🔴 Почта 2026-08-15: личный адрес вместо рабочего и подпись «mail» вместо
+ * самого адреса — решение владельца. Раньше на главной стояла строка
+ * «ignatov@a-3.ru»: рабочий адрес компании на личном сайте и открытый адрес в
+ * разметке, который сборщики почтовых баз читают наравне с человеком. Теперь
+ * ссылка подписана словом, а адрес живёт только в `href`.
+ */
 export const contacts: Contact[] = [
   { label: "tg", href: "https://t.me/innitv", external: true },
-  { label: "email", href: "mailto:ignatov@a-3.ru", external: false },
+  { label: "mail", href: "mailto:i@ivan-ignatov.ru", external: false },
   {
     label: "linkedin",
     href: "https://www.linkedin.com/in/%D0%B8%D0%B2%D0%B0%D0%BD-%D0%B8%D0%B3%D0%BD%D0%B0%D1%82%D0%BE%D0%B2-59284326a/",

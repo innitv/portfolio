@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { ArchiveSheet } from "@/components/portfolio/archive/archive-sheet"
 import { ArchiveStripe } from "@/components/portfolio/archive/archive-stripe"
 import { useRaceBoot } from "@/components/portfolio/archive/use-race-boot"
+import { DURATION, EASE, TIMING } from "@/components/portfolio/motion"
 
 import { archiveCompanies, type ArchiveCompany } from "./portfolio-archive.model"
 import { contacts, type CompanyId } from "./portfolio.data"
@@ -46,15 +47,15 @@ const REVEAL_ORDER = {
 } as const
 
 /** Шаг лесенки проявления, секунды. */
-const REVEAL_STAGGER = 0.07
+const REVEAL_STAGGER = TIMING.revealStagger
 
 /** Длительность проявления одного блока, секунды. */
-const REVEAL_DURATION = 0.5
+const REVEAL_DURATION = DURATION.reveal
 
 /** Сдвиг блока при проявлении, px. */
 const REVEAL_OFFSET = 14
 
-const EASE_REVEAL = [0.16, 1, 0.3, 1] as const
+const EASE_REVEAL = EASE.item
 
 /** Потолок ожидания гарнитур перед проявлением, мс. */
 const FONTS_TIMEOUT = 600
@@ -92,6 +93,15 @@ export interface PortfolioArchiveViewProps {
    * про кнопки браузера, из-за чего «вперёд» на компанию шло без движения.
    */
   instant?: boolean
+  /**
+   * Содержимое синего экрана уже показано — лесенка не играет.
+   *
+   * 🔴 Ровно один случай: подмена под уехавшим листом возврата. Там лесенку
+   * отыграл сам приехавший лист, и повтор моргнул бы текстом на стыке. Во всех
+   * прочих случаях лесенка идёт — правило владельца «один и тот же экран
+   * открывается одинаково, откуда бы ни пришли».
+   */
+  revealed?: boolean
   /** Закрытие синего экрана: маршрут уходит на главную. */
   onCloseCompany?: () => void
   /** Раскрытие компании нажатием на её имя: маршрут уходит на `/<companyId>`. */
@@ -103,6 +113,7 @@ export interface PortfolioArchiveViewProps {
 export function PortfolioArchiveView({
   companyId: openId,
   instant = true,
+  revealed = false,
   onCloseCompany,
   onOpenCompany,
   onOpenCase,
@@ -207,7 +218,11 @@ export function PortfolioArchiveView({
             Справа все каналы связи, а не одна почта: прежняя главная держала
             их строкой внизу, и при переносе дизайна они были бы потеряны —
             решение владельца 2026-08-15 оставить на главной именно ссылки.
-            Порядок и подписи взяты из данных, ничего не сочинено.
+
+            🔴 Все три подписаны СЛОВОМ, включая почту. Раньше почта выводилась
+            самим адресом, и он оставался открытым в разметке — а это ровно то,
+            что собирают почтовые роботы. Адрес теперь виден только в `href` и
+            в строке состояния браузера при наведении.
           */}
           <span className="pa-contacts" data-testid="pa-contacts">
             {contacts.map((channel) => (
@@ -218,9 +233,7 @@ export function PortfolioArchiveView({
                 rel={channel.external ? "noreferrer" : undefined}
                 target={channel.external ? "_blank" : undefined}
               >
-                {channel.label === "email"
-                  ? channel.href.replace("mailto:", "")
-                  : channel.label}
+                {channel.label}
               </a>
             ))}
           </span>
@@ -282,6 +295,7 @@ export function PortfolioArchiveView({
         */
         instant={instant}
         onClose={closeCompany}
+        revealed={revealed}
         onOpenCase={onOpenCase}
       />
     </div>

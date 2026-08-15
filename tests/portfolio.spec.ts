@@ -36,6 +36,18 @@ test("главная показывает имя, ряд компаний и к�
   const contacts = page.getByTestId("pa-contacts").locator("a");
   await expect(contacts).toHaveCount(3);
   await expect(contacts.first()).toHaveAttribute("href", /t\.me/);
+
+  /*
+    🔴 Почта подписана словом, а сам адрес в тексте страницы не появляется —
+    решение владельца 2026-08-15. Открытый адрес в разметке собирают почтовые
+    роботы; здесь он живёт только в `href`.
+  */
+  const mail = contacts.nth(1);
+  await expect(mail).toHaveText("mail");
+  await expect(mail).toHaveAttribute("href", "mailto:i@ivan-ignatov.ru");
+
+  const visible = await page.evaluate(() => document.body.innerText);
+  expect(visible, "Адрес почты виден в тексте страницы").not.toMatch(/@[\w.-]+\.\w+/);
 });
 
 test("имя компании ведёт на её маршрут", async ({ page }) => {
@@ -132,7 +144,46 @@ test("кнопки браузера ходят по экранам, а не по
  * (приходящая плоскость) и открытие компании с главной (спуск). Уход синего на
  * главную играет сам — это exit-анимация компонента, ей источник не важен.
  */
-test("«назад» с кейса идёт приходящей плоскостью, как и кнопка на экране", async ({ page }) => {
+/*
+ * 🔴 Лист выглядит одинаково, над какой бы страницей ни приехал.
+ *
+ * Владелец, 2026-08-15: «почему когда с кейса делаешь переход, название
+ * компании чернеет». Белый цвет и гарнитура жили на `.pa-root` — корне
+ * главной, — а лист возврата приезжает поверх кейса, вне этого корня, и
+ * наследовал чернильный цвет документа: имя ехало чёрным и белело только
+ * после подмены экрана. Замер поймал ровно это: `rgb(0,0,0)` в движении,
+ * `rgb(255,255,255)` после.
+ *
+ * Проверяется именно В ДВИЖЕНИИ: после подмены цвет верен в любом случае, и
+ * проверка на готовом экране дефекта не увидела бы.
+ */
+test("имя компании не темнеет на приезде с кейса", async ({ page }) => {
+  await page.goto(portfolioUrl("/a3/case/dashboard-redesign"));
+  await expect(page.getByTestId("pc-title")).toBeVisible();
+
+  /*
+    Замер снимается ОДНИМ кадром в середине приезда, без ожиданий: `expect` с
+    ретраями досматривает движение до конца, а после подмены экрана цвет верен
+    в любом случае — так проверка проходила и на сломанном коде.
+  */
+  const style = await page.evaluate(async () => {
+    document.querySelector<HTMLElement>("[data-testid='pc-back']")!.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const huge = document.querySelector(".pa-huge");
+    if (!huge) return null;
+    const computed = getComputedStyle(huge);
+    return { color: computed.color, font: computed.fontFamily, caseAlive: Boolean(document.querySelector(".pc-root")) };
+  });
+
+  expect(style, "лист не приехал").not.toBeNull();
+  // Кейс ещё под листом — значит замер снят именно в движении.
+  expect(style!.caseAlive, "замер снят уже после подмены экрана").toBe(true);
+  expect(style!.color, "имя приезжает не белым").toBe("rgb(255, 255, 255)");
+  // Гарнитура ехала той же дорогой: без своей она бралась со страницы кейса.
+  expect(style!.font, "гарнитура взята со страницы под листом").toMatch(/Manrope/);
+});
+
+test("«назад» с кейса приводит лист компании, как и кнопка на экране", async ({ page }) => {
   await page.goto(portfolioUrl());
   await page.getByTestId("pa-company-a3").click();
   await page.getByTestId("pa-case-dashboard-redesign").click();
@@ -140,12 +191,77 @@ test("«назад» с кейса идёт приходящей плоскос�
 
   await page.goBack();
 
-  const curtain = page.getByTestId("pa-curtain");
-  await expect(curtain).toHaveAttribute("data-direction", "in");
-  await expect(curtain).toHaveCount(0, { timeout: 4000 });
+  // Лист приезжает поверх кейса — и кейс всё ещё под ним.
+  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+  await expect(page.getByTestId("pc-title")).toBeVisible();
 
   await expect(page).toHaveURL(/\/a3$/);
-  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+  await expect(page.getByTestId("pc-root")).toHaveCount(0, { timeout: 4000 });
+  await expect(page.getByTestId("pa-sheet")).toHaveCount(1);
+});
+
+/*
+ * 🔴 Экран компании открывается ОДИНАКОВО, откуда бы ни пришли.
+ *
+ * Владелец, 2026-08-15: «с главной у меня текст быстро появляется, а когда с
+ * кейса — то медленно». Замер подтвердил: скорость лесенки та же, разным был
+ * момент старта. С главной движения накладываются — плоскость едет 0,72 с, а
+ * текст идёт поверх неё с 0,38 и встаёт к её приходу (имя на 741 мс). На
+ * возврате они шли подряд: пустая плоскость закрывала кейс, и лишь потом
+ * стартовала лесенка (имя на 1072 мс).
+ *
+ * Лечение — в маршруте: на возврате приезжает сам лист компании, а не
+ * плоскость-пустышка. Проверка сравнивает ОБА пути по одному признаку: когда
+ * имя стало полностью видимым. Порог 120 мс — это два кадра запаса на разброс
+ * планировщика; настоящее расхождение было втрое больше.
+ */
+test("текст встаёт одинаково с главной и с кейса", async ({ page }) => {
+  /*
+    Нажатие и замер идут ВНУТРИ страницы, одним вызовом: между командой из
+    теста и настоящим кликом лежит задержка протокола, и на ней первый замер
+    показывал 1650 мс вместо 740 — то есть врал ровно на величину, которую и
+    надо было сравнивать.
+  */
+  const nameShownAfterClick = (testId: string) =>
+    page.evaluate(async (id) => {
+      const target = document.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+      if (!target) return -1;
+
+      const t0 = performance.now();
+      target.click();
+
+      return new Promise<number>((resolve) => {
+        const tick = () => {
+          const huge = document.querySelector(".pa-huge");
+          if (huge && Number(getComputedStyle(huge).opacity) > 0.98) {
+            resolve(Math.round(performance.now() - t0));
+            return;
+          }
+          if (performance.now() - t0 > 4000) {
+            resolve(-1);
+            return;
+          }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+    }, testId);
+
+  await page.goto(portfolioUrl());
+  await expect(page.getByTestId("pa-word")).toBeVisible();
+  const fromHome = await nameShownAfterClick("pa-company-a3");
+
+  await page.getByTestId("pa-case-dashboard-redesign").click();
+  await expect(page.getByTestId("pc-title")).toBeVisible();
+
+  const fromCase = await nameShownAfterClick("pc-back");
+
+  expect(fromHome, "имя не встало при открытии с главной").toBeGreaterThan(0);
+  expect(fromCase, "имя не встало при возврате с кейса").toBeGreaterThan(0);
+  expect(
+    Math.abs(fromCase - fromHome),
+    `С главной ${fromHome} мс, с кейса ${fromCase} мс`,
+  ).toBeLessThan(120);
 });
 
 test("«вперёд» на компанию идёт спуском, а не подменой", async ({ page }) => {
@@ -305,29 +421,27 @@ test("с кейса возврат ведёт к работам своей ко�
   /*
     🔴 Возврат — это движение, а не подмена страницы.
 
-    Кобальтовая плоскость приходит сверху вниз и накрывает кейс, и только под
-    ней меняется маршрут. Без этого возврат был мгновенным, хотя дорога на кейс
-    — движение: «анимацию не забудь перенести» (владелец, 2026-08-14).
-
-    Проверяется занавес именно ПРИХОДЯЩИЙ: у уходящего то же имя и тот же класс,
-    отличается направление.
+    Поверх кейса ПРИЕЗЖАЕТ сам экран компании — целиком, со своим спуском и
+    лесенкой, — и только когда он приехал, меняется маршрут. Плоскости-пустышки
+    здесь больше нет: пока возврат вёл её, движения шли подряд, а не внахлёст, и
+    текст вставал на 300 мс позже, чем при открытии с главной (2026-08-15).
   */
-  const curtain = page.getByTestId("pa-curtain");
-  await expect(curtain).toHaveAttribute("data-direction", "in");
-  await expect(curtain).toHaveCount(0, { timeout: 4000 });
-
-  await expect(page).toHaveURL(/\/a3$/);
-  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+  const sheet = page.getByTestId("pa-sheet");
+  await expect(sheet).toBeVisible();
   await expect(page.locator(".pa-huge")).toHaveText("A3");
 
   /*
-    🔴 Плакат не мелькает по дороге.
-
-    Синий экран приходил спуском 0.72 с, и всё это время под ним был виден
-    главный экран — владелец поймал это сразу: «успевает проскальзывать
-    стартовый экран». По адресу экран обязан быть открыт с первого кадра, а
-    заглушка на время подгрузки чанка — кобальтовой, а не чернильной.
+    Кейс держится ПОД приезжающим листом всю дорогу: пропади он раньше, под
+    едущей плоскостью зияла бы пустота.
   */
+  await expect(page.getByTestId("pc-title")).toBeVisible();
+
+  await expect(page).toHaveURL(/\/a3$/);
+  await expect(page.getByTestId("pc-root")).toHaveCount(0, { timeout: 4000 });
+
+  // Лист ровно один: подмена идёт одним обновлением, без наложения двух копий.
+  await expect(sheet).toHaveCount(1);
+
   const plane = page.getByTestId("pa-sheet-plane");
   await expect(plane).toHaveCSS("clip-path", /inset\(0%\)|none/);
 });

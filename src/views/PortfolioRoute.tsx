@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { ArchiveSheet } from "@/components/portfolio/archive/archive-sheet"
 import { SheetCurtain } from "@/components/portfolio/archive/sheet-curtain"
 
 /**
@@ -26,7 +27,7 @@ import { SheetCurtain } from "@/components/portfolio/archive/sheet-curtain"
 import { PortfolioArchiveView } from "./PortfolioArchiveView"
 import { PortfolioCaseView } from "./PortfolioCaseView"
 
-import { WORDMARK } from "./portfolio-archive.model"
+import { archiveCompanies, WORDMARK } from "./portfolio-archive.model"
 import { caseById, companyById, type CompanyId } from "./portfolio.data"
 
 /**
@@ -152,8 +153,12 @@ function readAndCanonicalize(): Screen {
 type Move =
   /** Плоскость компании уезжает вверх, под ней уже открытый кейс. */
   | { kind: "curtain-out"; word: string }
-  /** Плоскость компании приходит сверху и накрывает кейс; экран меняется под ней. */
-  | { kind: "curtain-in"; word: string }
+  /**
+   * Экран компании ПРИЕЗЖАЕТ поверх кейса — целиком, со своим спуском и
+   * лесенкой, а не пустой цветной плоскостью. Так возврат идёт тем же одним
+   * движением, что и открытие с главной.
+   */
+  | { kind: "sheet-in"; companyId: CompanyId }
   /** Синий экран спускается на ряд имён. */
   | { kind: "sheet-drop" }
   /** Подмена без движения: экран либо уходит своей exit-анимацией, либо меняется сразу. */
@@ -164,7 +169,7 @@ function moveFor(from: Screen, to: Screen): Move {
     return { kind: "curtain-out", word: WORDMARK[from.companyId] }
   }
   if (from.kind === "case" && to.kind === "company" && from.companyId === to.companyId) {
-    return { kind: "curtain-in", word: WORDMARK[to.companyId] }
+    return { kind: "sheet-in", companyId: to.companyId }
   }
   if (from.kind === "home" && to.kind === "company") return { kind: "sheet-drop" }
   return { kind: "cut" }
@@ -179,9 +184,13 @@ export function PortfolioRoute() {
    * переживало возврат и на следующем кейсе уводило маршрут обратно (дефект
    * 2026-08-15, поймал владелец). Одно состояние такой ловушки не создаёт.
    */
-  const [curtain, setCurtain] = React.useState<{ direction: "in" | "out"; word: string } | null>(
-    null,
-  )
+  const [curtain, setCurtain] = React.useState<{ word: string } | null>(null)
+
+  /*
+   * Лист компании, приезжающий поверх кейса на возврате. Он и есть «занавес»
+   * этого направления: тот же экран, тот же спуск, та же лесенка.
+   */
+  const [arrivingCompany, setArrivingCompany] = React.useState<CompanyId | null>(null)
 
   /*
    * Экран, который встанет ПОСЛЕ того, как приходящая плоскость закроет собой
@@ -199,6 +208,13 @@ export function PortfolioRoute() {
    * плоскость едет второй раз, и мелькает ряд имён.
    */
   const [sheetInstant, setSheetInstant] = React.useState(true)
+
+  /*
+   * Лист встаёт готовым, без лесенки: она только что отыграла в приехавшем
+   * листе, и повтор читался бы как моргание текста на стыке. Сбрасывается на
+   * любом следующем переходе — там лесенка снова нужна.
+   */
+  const [arrivedRevealed, setArrivedRevealed] = React.useState(false)
 
   /*
    * Текущий экран, доступный обработчикам без пересоздания колбэков: `navigate`
@@ -234,6 +250,8 @@ export function PortfolioRoute() {
       if (pendingRef.current) {
         pendingRef.current = null
         setCurtain(null)
+        setArrivingCompany(null)
+        setArrivedRevealed(false)
         setSheetInstant(true)
         setScreenNow(next)
         return
@@ -241,22 +259,27 @@ export function PortfolioRoute() {
 
       const move = moveFor(from, next)
 
-      if (move.kind === "curtain-in") {
-        // Экран пока НЕ меняем: сначала плоскость закроет кейс собой.
-        setSheetInstant(true)
-        setCurtain({ direction: "in", word: move.word })
+      if (move.kind === "sheet-in") {
+        /*
+         * Экран пока НЕ меняем: сначала лист приедет поверх кейса. Пока он
+         * едет, внутри него идёт обычная лесенка — поэтому текст встаёт к
+         * приходу цвета, ровно как при открытии с главной.
+         */
+        setArrivingCompany(move.companyId)
         pendingRef.current = next
         return
       }
 
       if (move.kind === "curtain-out") {
         // Кейс встаёт сразу — плоскость уезжает уже с него.
-        setCurtain({ direction: "out", word: move.word })
+        setArrivedRevealed(false)
+        setCurtain({ word: move.word })
         setScreenNow(next)
         return
       }
 
       setCurtain(null)
+      setArrivedRevealed(false)
       setSheetInstant(move.kind !== "sheet-drop")
       setScreenNow(next)
     },
@@ -284,18 +307,37 @@ export function PortfolioRoute() {
 
   const openHome = React.useCallback(() => go(""), [go])
 
-  /** Завершение движения: приходящая плоскость отдаёт экран, уходящая просто гаснет. */
-  const finishCurtain = React.useCallback(() => {
+  /** Уходящая плоскость просто гаснет: кейс под ней уже стоит. */
+  const finishCurtain = React.useCallback(() => setCurtain(null), [])
+
+  /*
+   * Приехавший лист отдаёт экран маршруту.
+   *
+   * Подмена идёт ОДНИМ обновлением: в этот же кадр приезжий лист снимается, а
+   * на его месте встаёт настоящий — с тем же содержимым и уже без лесенки
+   * (`revealed`), иначе текст моргнул бы на стыке.
+   */
+  const finishArrival = React.useCallback(() => {
     const pending = pendingRef.current
-    setCurtain(null)
-    if (pending) {
-      pendingRef.current = null
-      setScreenNow(pending)
-    }
+    if (!pending) return
+    pendingRef.current = null
+    setArrivedRevealed(true)
+    setSheetInstant(true)
+    setArrivingCompany(null)
+    setScreenNow(pending)
   }, [setScreenNow])
 
   const curtainNode = curtain ? (
-    <SheetCurtain direction={curtain.direction} onDone={finishCurtain} wordmark={curtain.word} />
+    <SheetCurtain onDone={finishCurtain} wordmark={curtain.word} />
+  ) : null
+
+  const arrivingSheet = arrivingCompany ? (
+    <ArchiveSheet
+      company={archiveCompanies.find((item) => item.id === arrivingCompany)}
+      onClose={openHome}
+      onOpenCase={(companyId, caseId) => go(`${companyId}/case/${caseId}`)}
+      onOpened={finishArrival}
+    />
   ) : null
 
   if (screen.kind === "case" && company && study) {
@@ -318,6 +360,7 @@ export function PortfolioRoute() {
           onOpenCompany={() => go(company.id)}
         />
         {curtainNode}
+        {arrivingSheet}
       </>
     )
   }
@@ -346,6 +389,7 @@ export function PortfolioRoute() {
         companyId={screen.kind === "company" ? screen.companyId : undefined}
         instant={sheetInstant}
         onCloseCompany={openHome}
+        revealed={arrivedRevealed}
         onOpenCase={(openedCompanyId, caseId) => go(`${openedCompanyId}/case/${caseId}`)}
         onOpenCompany={(openedCompanyId) => go(openedCompanyId)}
       />

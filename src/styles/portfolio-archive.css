@@ -165,7 +165,7 @@ html[data-portfolio-surface="archive"] body {
   position: relative;
   min-block-size: 100dvh;
   background-color: var(--pa-ink);
-  color: #fff;
+  color: var(--pa-paper);
   font-family: var(--pa-sans);
 }
 
@@ -256,7 +256,7 @@ html[data-portfolio-surface="archive"] body {
   position: relative;
   color: inherit;
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color var(--pa-dur-hover) ease;
 }
 
 /*
@@ -280,7 +280,7 @@ html[data-portfolio-surface="archive"] body {
 
 .pa-contact:hover,
 .pa-contact:focus-visible {
-  color: var(--pa-ink-invert, #fff);
+  color: var(--pa-ink-invert);
 }
 
 /* Тач-цель добирается псевдоэлементом — по тем же причинам, что у `.pa-home`. */
@@ -293,13 +293,13 @@ html[data-portfolio-surface="archive"] body {
 }
 
 .pa-home:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--pa-paper);
   outline-offset: 6px;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .pa-home:hover {
-    color: #fff;
+    color: var(--pa-paper);
   }
 }
 
@@ -326,7 +326,7 @@ html[data-portfolio-surface="archive"] body {
   block-size: var(--pa-stripe-height);
   margin-block-start: calc(-1 * var(--pa-stripe-overlap));
   margin-inline-end: calc(-1 * var(--pa-field));
-  border-block-start: var(--pa-stripe-edge) solid #fff;
+  border-block-start: var(--pa-stripe-edge) solid var(--pa-paper);
 }
 
 .pa-cursive {
@@ -355,7 +355,7 @@ html[data-portfolio-surface="archive"] body {
   border: 0;
   cursor: pointer;
   background-color: transparent;
-  background-image: conic-gradient(#fff 0 25%, transparent 0 50%, #fff 0 75%, transparent 0);
+  background-image: conic-gradient(var(--pa-paper) 0 25%, transparent 0 50%, var(--pa-paper) 0 75%, transparent 0);
   background-size: calc(var(--pa-flag-cell) * 2) calc(var(--pa-flag-cell) * 2);
   background-position: var(--pa-flag-cell) 0;
 }
@@ -363,7 +363,7 @@ html[data-portfolio-surface="archive"] body {
 /* Флаг — кнопка (пускает заезд), и с клавиатуры до неё доходят. Кольцо внутрь:
    снаружи оно ушло бы за край окна, полоса стоит навылет. */
 .pa-flag:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--pa-paper);
   outline-offset: -6px;
 }
 
@@ -436,11 +436,11 @@ html[data-portfolio-surface="archive"] body {
   inline-size: var(--pa-sep-width);
   margin-inline: var(--pa-sep-gap);
   align-self: stretch;
-  background-color: rgba(255, 255, 255, 0.55);
+  background-color: var(--pa-paper-a55);
 }
 
 .pa-cell:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--pa-paper);
   outline-offset: 10px;
 }
 
@@ -451,11 +451,11 @@ html[data-portfolio-surface="archive"] body {
  */
 @media (hover: hover) and (pointer: fine) {
   .pa-name {
-    transition: transform 0.32s var(--pa-ease-out);
+    transition: transform var(--pa-dur-flag) var(--pa-ease-out);
   }
 
   .pa-meta {
-    transition: color 0.25s ease;
+    transition: color var(--pa-dur-hover) ease;
   }
 
   .pa-cell:hover .pa-name {
@@ -494,10 +494,26 @@ html[data-portfolio-surface="archive"] body {
  * там браузер отключает субпиксельное сглаживание, и крупное имя компании
  * выглядело обведённым. Разбор — в шапке `archive-sheet.tsx`.
  */
+/*
+ * 🔴 Лист задаёт цвет и гарнитуру САМ, а не наследует их от `.pa-root`.
+ *
+ * Он фиксированный слой поверх окна и с 2026-08-15 приезжает ещё и на возврате
+ * с кейса — то есть рендерится ВНЕ главной. Пока белый цвет жил только на
+ * `.pa-root`, на этом пути имя компании наследовало чернильный цвет документа
+ * и приезжало чёрным, а после подмены экрана становилось белым: владелец
+ * поймал это сразу — «почему когда с кейса делаешь переход, название компании
+ * чернеет». Гарнитура ехала туда же: без своего `font-family` лист брал шрифт
+ * страницы кейса.
+ *
+ * Правило общее: слой, который может встать над любой страницей, не вправе
+ * зависеть от того, над какой именно он оказался.
+ */
 .pa-sheet {
   position: fixed;
   inset: 0;
   z-index: 8;
+  color: var(--pa-paper);
+  font-family: var(--pa-sans);
 }
 
 .pa-sheet-plane {
@@ -559,7 +575,7 @@ html[data-portfolio-surface="archive"] body {
    * смешение белого с фоном в тех же долях. Контраст 6.26:1, выше порога 4.5;
    * 0.75 давали 4.3:1 и потому в своё время были подняты.
    */
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--pa-paper-a85);
   /* Кегль и интерлиньяж — как у шапки главного экрана: при 12 против 13 верх
      текста расходился на 6 px даже при совпадающем верхе бокса. */
   font-size: var(--pa-meta-size);
@@ -577,13 +593,13 @@ html[data-portfolio-surface="archive"] body {
 }
 
 .pa-back:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--pa-paper);
   outline-offset: 4px;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .pa-back:hover {
-    color: #fff;
+    color: var(--pa-paper);
   }
 }
 
@@ -635,9 +651,9 @@ html[data-portfolio-surface="archive"] body {
   min-block-size: 56px;
   padding: 18px var(--pa-field);
   border: 0;
-  border-block-end: 1px solid rgba(255, 255, 255, 0.3);
+  border-block-end: 1px solid var(--pa-paper-a30);
   background: transparent;
-  color: #fff;
+  color: var(--pa-paper);
   font: inherit;
   text-align: start;
   cursor: pointer;
@@ -646,7 +662,7 @@ html[data-portfolio-surface="archive"] body {
 /* Верхняя линия ряда — на первой строке; `border: 0` выше её не снимает,
    специфичность правила с `:first-child` больше. */
 .pa-case:first-child {
-  border-block-start: 1px solid rgba(255, 255, 255, 0.3);
+  border-block-start: 1px solid var(--pa-paper-a30);
 }
 
 .pa-case-index {
@@ -677,12 +693,12 @@ html[data-portfolio-surface="archive"] body {
 
 .pa-case-index,
 .pa-case-impact {
-  transition: opacity 0.3s;
+  transition: opacity var(--pa-dur-tick);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .pa-case-title {
-    transition: transform 0.34s var(--pa-ease-out);
+    transition: transform var(--pa-dur-flag-slow) var(--pa-ease-out);
   }
 
   .pa-case:hover .pa-case-title {
@@ -692,7 +708,7 @@ html[data-portfolio-surface="archive"] body {
 
 .pa-case:hover,
 .pa-case:focus-visible {
-  background-color: #fff;
+  background-color: var(--pa-paper);
   color: var(--pa-cobalt);
   outline: 0;
 }
@@ -746,7 +762,7 @@ html[data-portfolio-surface="archive"] body {
   letter-spacing: var(--pa-meta-tracking);
   color: var(--pa-mute);
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity var(--pa-dur-tick);
 }
 
 .pa-hud[data-on="true"] {
@@ -762,15 +778,15 @@ html[data-portfolio-surface="archive"] body {
   display: block;
   inline-size: 12px;
   block-size: 12px;
-  background-color: rgba(255, 255, 255, 0.16);
+  background-color: var(--pa-paper-a16);
 }
 
 .pa-lamp[data-state="on"] {
-  background-color: #e11d2e;
+  background-color: var(--pa-race-red);
 }
 
 .pa-lamp[data-state="go"] {
-  background-color: #27c46b;
+  background-color: var(--pa-race-green);
 }
 
 .pa-count {
@@ -802,7 +818,7 @@ html[data-portfolio-surface="archive"] body {
 }
 
 .pa-car-wrap[data-drive="true"] {
-  animation: pa-drive var(--pa-race, 4.5s) cubic-bezier(0.3, 0.02, 0.2, 1) forwards;
+  animation: pa-drive var(--pa-dur-race) var(--pa-ease-race) forwards;
 }
 
 @keyframes pa-drive {
@@ -810,7 +826,7 @@ html[data-portfolio-surface="archive"] body {
     transform: translateX(-260px);
   }
   to {
-    transform: translateX(var(--pa-race-to, 1200px));
+    transform: translateX(var(--pa-race-distance));
   }
 }
 

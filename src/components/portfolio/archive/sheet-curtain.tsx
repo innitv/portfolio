@@ -2,6 +2,8 @@ import * as React from "react";
 
 import { motion } from "framer-motion";
 
+import { DURATION as MOTION, EASE } from "@/components/portfolio/motion";
+
 /**
  * Уход синего экрана компании при переходе на кейс.
  *
@@ -40,7 +42,7 @@ import { motion } from "framer-motion";
  * 90 % к 445, у ухода — 240 и 450. Расходятся только первые 150 мс, и это
  * намеренно: уход отвечает на нажатие и не имеет права медлить.
  */
-const DURATION = 0.72;
+const DURATION = MOTION.curtain;
 
 const OPEN = "inset(0% 0% 0% 0%)";
 const CLOSED = "inset(0% 0% 100% 0%)";
@@ -92,7 +94,7 @@ const CLOSED = "inset(0% 0% 100% 0%)";
  * Кривые здесь подбирались ТОЛЬКО расчётом профиля и замером на кадрах — по
  * контрольным точкам разницу между этими тремя вариантами не увидеть.
  */
-const EASE_OUT = [0.4, 0.3, 0.3, 1] as const;
+const EASE_OUT = EASE.curtainOut;
 
 /**
  * ─── ЗАНАВЕС ХОДИТ В ОБЕ СТОРОНЫ ────────────────────────────────────────────
@@ -109,7 +111,7 @@ const EASE_OUT = [0.4, 0.3, 0.3, 1] as const;
  * (`EASE_IN_SHEET` в `archive-sheet.tsx`): медленный старт с разгоном, как
  * будто цвет разливается из полосы наверху. Длительность общая, 0.72.
  */
-const EASE_IN = [0.4, 0, 0.15, 1] as const;
+const EASE_IN = EASE.inSheet;
 
 export interface SheetCurtainProps {
   /**
