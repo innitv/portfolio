@@ -242,6 +242,56 @@ html[data-portfolio-surface="archive"] body {
   min-block-size: 44px;
 }
 
+/*
+ * Каналы связи в правом углу главной. Разделитель — тот же middot, что во всех
+ * служебных строках экрана; ставится псевдоэлементом, чтобы не заводить в
+ * разметке узлы, которые ничего не значат для чтения с экрана.
+ */
+.pa-contacts {
+  display: flex;
+  gap: 0;
+}
+
+.pa-contact {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+/*
+ * Зазор и разделитель считаются вместе: точка шириной ~0.3em стоит В СЕРЕДИНЕ
+ * промежутка, иначе она прилипает к следующему слову и строка читается как
+ * «tg ·ignatov».
+ */
+.pa-contact + .pa-contact {
+  margin-inline-start: 1.3em;
+}
+
+.pa-contact + .pa-contact::before {
+  content: "·";
+  position: absolute;
+  /* Замер на 2560: зазор 17 px, знак в моноширинной 7,8 — по 4,6 с каждой
+     стороны. При -0,8em оставалось 6,6 слева и 2,7 справа, и точка читалась
+     приклеенной к следующему слову. */
+  inset-inline-start: -0.95em;
+  color: var(--pa-mute);
+}
+
+.pa-contact:hover,
+.pa-contact:focus-visible {
+  color: var(--pa-ink-invert, #fff);
+}
+
+/* Тач-цель добирается псевдоэлементом — по тем же причинам, что у `.pa-home`. */
+.pa-contact::after {
+  content: "";
+  position: absolute;
+  inset-inline: -6px;
+  inset-block: -14px;
+  min-block-size: 44px;
+}
+
 .pa-home:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 6px;

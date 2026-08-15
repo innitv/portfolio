@@ -94,26 +94,57 @@ const CLOSED = "inset(0% 0% 100% 0%)";
  */
 const EASE_OUT = [0.4, 0.3, 0.3, 1] as const;
 
+/**
+ * ─── ЗАНАВЕС ХОДИТ В ОБЕ СТОРОНЫ ────────────────────────────────────────────
+ * `out` — уход на кейс: плоскость компании уезжает вверх, под ней уже открыта
+ * работа. `in` — возврат с кейса: плоскость приходит сверху вниз и накрывает
+ * страницу кейса, а под ней открывается экран компании.
+ *
+ * Приход появился 2026-08-14 по замечанию владельца «анимацию не забудь
+ * перенести»: возврат к работам был мгновенной подменой страницы, хотя дорога
+ * туда — движение. Жест обязан читаться в обе стороны, иначе назад ведёт не
+ * тот же путь, которым пришли.
+ *
+ * Кривая прихода — та же, что у синего экрана внутри `/archive`
+ * (`EASE_IN_SHEET` в `archive-sheet.tsx`): медленный старт с разгоном, как
+ * будто цвет разливается из полосы наверху. Длительность общая, 0.72.
+ */
+const EASE_IN = [0.4, 0, 0.15, 1] as const;
+
 export interface SheetCurtainProps {
+  /**
+   * Направление. `out` — уход на кейс (по умолчанию), `in` — возврат к работам.
+   */
+  direction?: "in" | "out";
   /** Имя компании — то же слово, что стояло на синем экране. */
   wordmark: string;
   onDone: () => void;
 }
 
-export function SheetCurtain({ wordmark, onDone }: SheetCurtainProps) {
+export function SheetCurtain({ direction = "out", wordmark, onDone }: SheetCurtainProps) {
+  const coming = direction === "in";
+
   return (
     <motion.div
-      animate={{ clipPath: CLOSED }}
+      animate={{ clipPath: coming ? OPEN : CLOSED }}
       aria-hidden="true"
       className="pa-curtain"
+      data-direction={direction}
       data-testid="pa-curtain"
-      initial={{ clipPath: OPEN }}
+      initial={{ clipPath: coming ? CLOSED : OPEN }}
       onAnimationComplete={onDone}
-      transition={{ duration: DURATION, ease: EASE_OUT }}
+      transition={{ duration: DURATION, ease: coming ? EASE_IN : EASE_OUT }}
     >
-      {/* Имя компании уезжает вместе с плоскостью: без него уходит пустой
-          прямоугольник, и связь с экраном, откуда пришли, теряется. */}
-      <div className="pa-curtain-word">{wordmark}</div>
+      {/*
+        Имя едет с плоскостью только на УХОДЕ: там оно остаётся от экрана,
+        который закрывается, и без него уезжал бы пустой прямоугольник.
+
+        🔴 На приходе имени здесь НЕТ. Экран компании открывается лесенкой —
+        сначала цвет, потом текст, — и имя приходит вместе с остальным
+        содержимым уже на самом экране. Покажи его на занавесе, и оно
+        появилось бы дважды: сначала на плоскости, потом ещё раз в лесенке.
+      */}
+      {coming ? null : <div className="pa-curtain-word">{wordmark}</div>}
     </motion.div>
   );
 }

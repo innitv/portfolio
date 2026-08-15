@@ -29,7 +29,7 @@ type Story = StoryObj<typeof meta>
 const BOOT_TIMEOUT = 5000
 
 export const Default: Story = {
-  args: { onHome: fn(), onOpenCase: fn() },
+  args: { onCloseCompany: fn(), onOpenCase: fn(), onOpenCompany: fn() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
@@ -96,7 +96,7 @@ export const Default: Story = {
  * поймает: она меряет правый край текста, а не бокса.
  */
 export const FitsWithinField: Story = {
-  args: { onHome: fn(), onOpenCase: fn() },
+  args: { onCloseCompany: fn(), onOpenCase: fn(), onOpenCompany: fn() },
   name: "Ряд имён не выходит за поле",
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -147,16 +147,21 @@ export const FitsWithinField: Story = {
  * повторяет.
  */
 export const CompanySheet: Story = {
-  args: { onHome: fn(), onOpenCase: fn() },
+  /*
+    🔴 Раскрытая компания приходит АРГУМЕНТОМ, а не нажатием внутри истории.
+    С 2026-08-15 вид управляемый: нажатие на имя больше не раскрывает экран
+    само, оно сообщает маршруту новый адрес (`/a3`), и уже адрес возвращает
+    раскрытую компанию обратно в вид. Так адрес и экран не расходятся — до этой
+    правки закрытие экрана оставляло в строке адрес закрытого.
+
+    Витрине маршрута не положено, поэтому здесь проверяется то, что вид умеет
+    сам: раскрытое состояние выглядит верно и обе кнопки зовут маршрут с
+    правильными доводами. Сами переходы проверяет `yarn qa`.
+  */
+  args: { companyId: "a3", onCloseCompany: fn(), onOpenCase: fn(), onOpenCompany: fn() },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await waitFor(
-      () => expect(getComputedStyle(canvas.getByTestId("pa-word")).opacity).toBe("1"),
-      { timeout: BOOT_TIMEOUT },
-    )
-
-    await userEvent.click(canvas.getByTestId("pa-company-a3"))
     const sheet = await canvas.findByTestId("pa-sheet")
     await expect(sheet).toBeVisible()
 
@@ -167,8 +172,33 @@ export const CompanySheet: Story = {
     await userEvent.click(canvas.getByTestId("pa-case-dashboard-redesign"))
     await expect(args.onOpenCase).toHaveBeenCalledWith("a3", "dashboard-redesign")
 
-    // Возврат по «все работы»; Esc делает то же самое.
+    // «← все работы» уводит на главную — это тоже смена адреса, а не состояния.
     await userEvent.click(canvas.getByTestId("pa-back"))
-    await waitFor(() => expect(canvas.queryByTestId("pa-sheet")).toBeNull())
+    await expect(args.onCloseCompany).toHaveBeenCalled()
+  },
+}
+
+/**
+ * Нажатие на имя компании зовёт маршрут, а не раскрывает экран само.
+ *
+ * Отдельная история, потому что предмет здесь — граница между видом и
+ * маршрутом. Пока вид раскрывал экран сам, адрес оставался прежним, и
+ * состояние нельзя было ни скопировать ссылкой, ни отменить кнопкой «назад».
+ */
+export const CompanyClickAsksRoute: Story = {
+  args: { onCloseCompany: fn(), onOpenCase: fn(), onOpenCompany: fn() },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    await waitFor(
+      () => expect(getComputedStyle(canvas.getByTestId("pa-word")).opacity).toBe("1"),
+      { timeout: BOOT_TIMEOUT },
+    )
+
+    await userEvent.click(canvas.getByTestId("pa-company-a3"))
+
+    await expect(args.onOpenCompany).toHaveBeenCalledWith("a3")
+    // Сам вид экран не раскрывает: это сделает маршрут, вернув `companyId`.
+    await expect(canvas.queryByTestId("pa-sheet")).toBeNull()
   },
 }

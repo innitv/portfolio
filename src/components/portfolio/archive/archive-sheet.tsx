@@ -118,11 +118,24 @@ const CONTENT_EXIT = {
 
 export interface ArchiveSheetProps {
   company?: ArchiveCompany
+  /**
+   * Экран уже открыт при первом кадре — без спуска плоскости и без лесенки.
+   *
+   * 🔴 Нужен при заходе по адресу `/archive/<company>`, то есть при возврате со
+   * страницы кейса. Спуск здесь означал бы, что плакат под ним виден все 0.72 с:
+   * человек нажал «← все работы» и вместо работ компании успевает увидеть
+   * главный экран (поймано владельцем 2026-08-14).
+   *
+   * Движение остаётся ровно там, где оно содержательно: при нажатии на имя
+   * компании внутри `/archive`. Открытие по прямому адресу — не жест, а
+   * состояние страницы, и анимировать его нечем.
+   */
+  instant?: boolean
   onClose: () => void
   onOpenCase?: (companyId: ArchiveCompany["id"], caseId: string) => void
 }
 
-export function ArchiveSheet({ company, onClose, onOpenCase }: ArchiveSheetProps) {
+export function ArchiveSheet({ company, instant, onClose, onOpenCase }: ArchiveSheetProps) {
   const backRef = React.useRef<HTMLButtonElement | null>(null)
 
   React.useEffect(() => {
@@ -144,11 +157,23 @@ export function ArchiveSheet({ company, onClose, onOpenCase }: ArchiveSheetProps
    * общем порядке (имя, подпись, строки кейсов, величины) — ровно так же, как
    * в прототипе, где эти узлы шли одним плоским списком.
    */
+  /*
+    🔴 Лесенка содержимого идёт ВСЕГДА, даже когда плоскость уже открыта.
+
+    Открытие экрана компании — это два движения подряд: приходит цвет, за ним
+    лесенкой встаёт текст. При заходе по адресу цвет привёл занавес поверх
+    кейса, а лесенка обязана отыграть здесь — иначе один и тот же экран
+    открывается по-разному в зависимости от того, откуда пришли, и владелец
+    поймал это сразу: «почему разные анимации» (2026-08-14).
+
+    Разница только в отсчёте: после занавеса плоскость уже на месте, поэтому
+    ждать её незачем и пауза `ITEMS_DELAY` не нужна.
+  */
   const item = (index: number, shift = true) => ({
     animate: { opacity: 1, y: 0 },
     initial: { opacity: 0, y: shift ? ITEM_OFFSET : 0 },
     transition: {
-      delay: ITEMS_DELAY + index * ITEMS_STAGGER,
+      delay: (instant ? 0 : ITEMS_DELAY) + index * ITEMS_STAGGER,
       duration: ITEM_DURATION,
       ease: EASE_ITEM,
     },
@@ -188,8 +213,15 @@ export function ArchiveSheet({ company, onClose, onOpenCase }: ArchiveSheetProps
               // Уход в темпе прихода и с мягким завершением — см. SHEET_OUT.
               transition: { duration: SHEET_OUT, ease: EASE_OUT_SHEET },
             }}
-            initial={{ clipPath: CLOSED }}
-            transition={{ duration: SHEET_IN, ease: EASE_IN_SHEET }}
+            /*
+              🔴 При заходе по адресу плоскость открыта С ПЕРВОГО КАДРА.
+
+              Спуск отсюда занимал 0.72 с, и всё это время под ним был виден
+              плакат: человек нажимал «← все работы» на кейсе и успевал увидеть
+              главный экран вместо работ компании.
+            */
+            initial={{ clipPath: instant ? OPEN : CLOSED }}
+            transition={instant ? { duration: 0 } : { duration: SHEET_IN, ease: EASE_IN_SHEET }}
           />
 
           {/*

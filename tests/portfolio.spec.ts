@@ -8,45 +8,58 @@ import { expect, test } from "@playwright/test";
  * оглавлении, кнопка «Следующий кейс»). Оглавление и переход к следующему
  * кейсу сняты ещё в верстаке 2026-08-02, знаки компаний в заголовке — 08-03.
  *
- * Предмет этого файла — МАРШРУТЫ и наличие каркаса. Раскладку и разницу между
- * страницами проверяет `tests/portfolio-layout.check.mjs` (`yarn qa:layout`),
- * поведение компонентов — истории Storybook (`yarn test-storybook`).
+ * Предмет этого файла — МАРШРУТЫ, переходы и соответствие адреса экрану.
+ * Сетку страницы кейса проверяет `tests/case-grid.check.mjs`
+ * (`yarn qa:case-grid`), поведение компонентов — истории Storybook
+ * (`yarn test-storybook`).
  */
 
 const basePath = process.env.PORTFOLIO_BASE_PATH ?? "/";
 const portfolioUrl = (path = "") => `${basePath.replace(/\/$/, "")}${path}` || "/";
 
-test("главная показывает заголовок и три компании", async ({ page }) => {
+test("главная показывает имя, ряд компаний и каналы связи", async ({ page }) => {
   await page.goto(portfolioUrl());
 
-  await expect(page.getByRole("heading", { name: "Дизайнер сложных продуктов" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Компании" })).toBeVisible();
+  await expect(page.getByTestId("pa-word")).toHaveText("Product");
+  await expect(page.getByTestId("pa-cursive")).toHaveText("Archive");
 
   for (const id of ["a3", "rtk", "smlt"]) {
-    await expect(page.getByTestId(`pf-company-${id}`)).toBeVisible();
+    await expect(page.getByTestId(`pa-company-${id}`)).toBeVisible();
   }
 
-  // Контакт живёт только в подвале: в шапке его быть не должно (правка 08-03).
-  await expect(page.getByTestId("pf-footer-tg")).toBeVisible();
-  await expect(page.getByTestId("pf-contact-tg")).toHaveCount(0);
+  /*
+    Каналы связи стоят на главной ссылками, а не одной почтой текстом.
+    Прежний дизайн держал их строкой в подвале; при замене дизайна владелец
+    просил оставить именно ссылки (2026-08-15), иначе с сайта пропал бы
+    единственный способ написать.
+  */
+  const contacts = page.getByTestId("pa-contacts").locator("a");
+  await expect(contacts).toHaveCount(3);
+  await expect(contacts.first()).toHaveAttribute("href", /t\.me/);
 });
 
-test("карточка компании ведёт на её маршрут", async ({ page }) => {
+test("имя компании ведёт на её маршрут", async ({ page }) => {
   await page.goto(portfolioUrl());
-  await page.getByTestId("pf-company-a3").click();
+  await page.getByTestId("pa-company-a3").click();
 
   await expect(page).toHaveURL(/\/a3$/);
-  await expect(page.getByRole("heading", { name: "А3" })).toBeVisible();
-  await expect(page.getByTestId("pf-case-dashboard-redesign")).toBeVisible();
+  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+  await expect(page.locator(".pa-huge")).toHaveText("A3");
 });
 
-test("карточка кейса ведёт на маршрут кейса", async ({ page }) => {
+test("строка кейса ведёт на маршрут кейса", async ({ page }) => {
   await page.goto(portfolioUrl("/a3"));
-  await page.getByTestId("pf-case-dashboard-redesign").click();
+  await page.getByTestId("pa-case-dashboard-redesign").click();
 
   await expect(page).toHaveURL(/\/a3\/case\/dashboard-redesign$/);
   await expect(page.getByTestId("pc-title")).toHaveText("Редизайн главной");
-  await expect(page.getByTestId("pc-impact")).toBeVisible();
+  /*
+    Раньше здесь проверялась кобальтовая плоскость «Итог». Она снята 2026-08-14
+    вместе с таблицей, соседним кейсом и блоком фактов: в макете `95:1004` их
+    нет, а владелец сказал не вносить на страницу ничего сверх макета, пока он
+    его не дорисует. Признаком открывшегося кейса остаётся первый блок макета.
+  */
+  await expect(page.getByTestId("pc-intro-shots")).toBeVisible();
 });
 
 test("прямой заход на маршрут кейса открывает кейс", async ({ page }) => {
@@ -58,10 +71,194 @@ test("прямой заход на маршрут кейса открывает 
   await expect(page.getByTestId("pc-home")).toBeVisible();
 });
 
-test("неизвестный маршрут возвращает на главную", async ({ page }) => {
+/*
+ * ─── АДРЕС СЛЕДУЕТ ЗА ЭКРАНОМ ───────────────────────────────────────────────
+ *
+ * 🔴 Класс дефектов, который не видела НИ ОДНА ось приёмки и который дал два
+ * дефекта подряд 2026-08-15: экран верный, содержимое верное, врёт только
+ * строка адреса.
+ *
+ *   • закрытие синего экрана на `/archive/a3` показывало ряд имён, а в строке
+ *     оставалось `/archive/a3` — обновление возвращало не тот экран;
+ *   • открытие компании нажатием не меняло адрес вовсе, поэтому состояние
+ *     нельзя было ни скопировать ссылкой, ни отменить кнопкой «назад».
+ *
+ * Сборка проверяет типы, витрина — компонент в изоляции, `qa:case-grid` — доли
+ * сетки. Соответствие адреса экрану не принадлежит ни одной из них, поэтому
+ * проверки живут здесь: нужна настоящая история браузера.
+ */
+test("адрес следует за экраном в обе стороны", async ({ page }) => {
+  await page.goto(portfolioUrl());
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.getByTestId("pa-company-a3").click();
+  await expect(page).toHaveURL(/\/a3$/);
+
+  await page.getByTestId("pa-back").click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId("pa-sheet")).toHaveCount(0);
+});
+
+test("кнопки браузера ходят по экранам, а не по одному адресу", async ({ page }) => {
+  await page.goto(portfolioUrl());
+  await page.getByTestId("pa-company-a3").click();
+  await expect(page).toHaveURL(/\/a3$/);
+
+  await page.getByTestId("pa-case-dashboard-redesign").click();
+  await expect(page).toHaveURL(/\/a3\/case\/dashboard-redesign$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/a3$/);
+  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId("pa-sheet")).toHaveCount(0);
+
+  await page.goForward();
+  await expect(page).toHaveURL(/\/a3$/);
+});
+
+/*
+ * 🔴 Кнопки браузера идут теми же дорогами, что и кнопки на экране.
+ *
+ * Движение — свойство ПЕРЕХОДА, а не нажатия. До 2026-08-15 занавес взводился
+ * прямо в обработчиках, поэтому одна и та же дорога выглядела по-разному:
+ * нажал «← кейсы А3» — приходит синяя плоскость; нажал «назад» — экран
+ * подменяется мгновенно. Владелец: «хочу полноценно рабочую навигацию и через
+ * интерфейс, и по кнопкам назад-вперёд».
+ *
+ * Проверяются обе дороги, где движение есть: возврат к работам компании
+ * (приходящая плоскость) и открытие компании с главной (спуск). Уход синего на
+ * главную играет сам — это exit-анимация компонента, ей источник не важен.
+ */
+test("«назад» с кейса идёт приходящей плоскостью, как и кнопка на экране", async ({ page }) => {
+  await page.goto(portfolioUrl());
+  await page.getByTestId("pa-company-a3").click();
+  await page.getByTestId("pa-case-dashboard-redesign").click();
+  await expect(page.getByTestId("pc-title")).toBeVisible();
+
+  await page.goBack();
+
+  const curtain = page.getByTestId("pa-curtain");
+  await expect(curtain).toHaveAttribute("data-direction", "in");
+  await expect(curtain).toHaveCount(0, { timeout: 4000 });
+
+  await expect(page).toHaveURL(/\/a3$/);
+  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+});
+
+test("«вперёд» на компанию идёт спуском, а не подменой", async ({ page }) => {
+  await page.goto(portfolioUrl());
+  await page.getByTestId("pa-company-a3").click();
+  await expect(page).toHaveURL(/\/a3$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.goForward();
+  await expect(page).toHaveURL(/\/a3$/);
+
+  /*
+    Плоскость обязана ЕХАТЬ. Замер берётся сразу после перехода: при подмене
+    без движения `clip-path` стоит на `inset(0%)` с первого кадра — именно так
+    «вперёд» и работало, пока движение зависело от того, кто его вызвал.
+  */
+  const clip = await page
+    .getByTestId("pa-sheet-plane")
+    .evaluate((el) => getComputedStyle(el).clipPath);
+  expect(clip, `Плоскость на ${clip} — спуска нет`).not.toBe("inset(0%)");
+
+  // И доезжает до конца.
+  await expect(page.getByTestId("pa-sheet-plane")).toHaveCSS("clip-path", "inset(0%)", {
+    timeout: 3000,
+  });
+});
+
+/*
+ * Прерванное движение не оставляет экран висеть.
+ *
+ * Человек может нажать «назад» второй раз, пока плоскость ещё идёт. Досматривать
+ * её незачем — важно, чтобы маршрут и картинка сошлись на том, куда он идёт.
+ */
+test("второе «назад» посреди движения не ломает экран", async ({ page }) => {
+  await page.goto(portfolioUrl());
+  await page.getByTestId("pa-company-a3").click();
+  await page.getByTestId("pa-case-dashboard-redesign").click();
+  await expect(page.getByTestId("pc-title")).toBeVisible();
+
+  await page.goBack();
+  await page.waitForTimeout(200); // плоскость ещё в пути
+  await page.goBack();
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId("pa-word")).toBeVisible();
+  await expect(page.getByTestId("pa-sheet")).toHaveCount(0);
+  await expect(page.getByTestId("pa-curtain")).toHaveCount(0);
+});
+
+/*
+ * Разбор снисходителен к мусору в адресе, но строка приводится к тому экрану,
+ * который открыт: иначе `/a3/case/nope` осталось бы адресом реальной страницы,
+ * а для поиска — её дублем.
+ */
+test("неизвестный маршрут возвращает на главную и правит адрес", async ({ page }) => {
   await page.goto(portfolioUrl("/no-such-company"));
 
-  await expect(page.getByRole("heading", { name: "Дизайнер сложных продуктов" })).toBeVisible();
+  await expect(page.getByTestId("pa-word")).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.goto(portfolioUrl("/a3/case/no-such-case"));
+  await expect(page).toHaveURL(/\/a3\/case\/dashboard-redesign$/);
+});
+
+/*
+ * Адреса `/archive` и `/archive/<id>` прожили 14-15 августа, пока новый дизайн
+ * строился рядом со старым. Сохранённая за эти два дня ссылка обязана привести
+ * на тот же экран, а не на главную «по правилу неизвестного сегмента».
+ */
+test("старые адреса /archive приводят на те же экраны", async ({ page }) => {
+  await page.goto(portfolioUrl("/archive"));
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId("pa-word")).toBeVisible();
+
+  await page.goto(portfolioUrl("/archive/a3"));
+  await expect(page).toHaveURL(/\/a3$/);
+  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+});
+
+/*
+ * 🔴 Кейс, открытый ПОСЛЕ возврата, не закрывается сам.
+ *
+ * Дефект 2026-08-15, найден владельцем по точной цепочке: главная → A3 → кейс
+ * → «← кейсы А3» → любой кейс. Приходящий занавес рендерится только на странице
+ * кейса, а снимался лишь сменой маршрута — после возврата он оставался в
+ * состоянии и ждал. Стоило открыть следующий кейс, как он приезжал вместе с ним
+ * и своим завершением уводил маршрут обратно на работы компании: кейс
+ * открывался и через полторы секунды сам закрывался синей плоскостью.
+ *
+ * Проверка идёт по ВСЕЙ цепочке и смотрит состояние ПОСЛЕ паузы: сразу после
+ * нажатия картина верная, ложный возврат случается через ~1,5 с. Одиночные
+ * переходы этот дефект не видят — он живёт в остатке состояния от предыдущего.
+ */
+test("кейс, открытый после возврата, остаётся открытым", async ({ page }) => {
+  await page.goto(portfolioUrl());
+  await page.getByTestId("pa-company-a3").click();
+  await page.getByTestId("pa-case-dashboard-redesign").click();
+  await expect(page.getByTestId("pc-title")).toBeVisible();
+
+  await page.getByTestId("pc-back").click();
+  await expect(page).toHaveURL(/\/a3$/);
+  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+
+  await page.getByTestId("pa-case-flow").click();
+  await expect(page).toHaveURL(/\/a3\/case\/flow$/);
+
+  // Занавес обязан уйти и НЕ утащить за собой маршрут.
+  await expect(page.getByTestId("pa-curtain")).toHaveCount(0, { timeout: 4000 });
+  await page.waitForTimeout(1200);
+  await expect(page).toHaveURL(/\/a3\/case\/flow$/);
+  await expect(page.getByTestId("pc-title")).toBeVisible();
 });
 
 /*
@@ -85,15 +282,93 @@ test("каждый показ на странице кейса подписан"
   }
 });
 
-test("страница кейса уводит на соседний кейс", async ({ page }) => {
+/*
+ * 🔴 Возврат с кейса ведёт к работам СВОЕЙ компании, а не на главную.
+ *
+ * Решение владельца: человек уходит в кейс с синего экрана компании и должен
+ * вернуться к её же кейсам; на главную с кейса ведёт вторая строка шапки.
+ *
+ * Подпись при этом разная: здесь «← кейсы А3», на экране компании «← все
+ * работы». Пока обе назывались «все работы», одинаковые слова означали два
+ * разных перехода, и владелец, нажимая на кейсе, попадал не туда, куда ждал
+ * (2026-08-15).
+ *
+ * Проверяется и адрес, и результат: `/a3` обязан открыть синий экран сразу,
+ * без нажатия на имя компании.
+ */
+test("с кейса возврат ведёт к работам своей компании", async ({ page }) => {
   await page.goto(portfolioUrl("/a3/case/dashboard-redesign"));
+  await expect(page.getByTestId("pc-title")).toBeVisible();
 
-  const next = page.getByTestId("pc-next").getByRole("button");
-  await next.scrollIntoViewIfNeeded();
-  await next.click();
+  await page.getByTestId("pc-back").click();
 
-  await expect(page).toHaveURL(/\/a3\/case\/[a-z-]+$/);
-  await expect(page).not.toHaveURL(/dashboard-redesign$/);
+  /*
+    🔴 Возврат — это движение, а не подмена страницы.
+
+    Кобальтовая плоскость приходит сверху вниз и накрывает кейс, и только под
+    ней меняется маршрут. Без этого возврат был мгновенным, хотя дорога на кейс
+    — движение: «анимацию не забудь перенести» (владелец, 2026-08-14).
+
+    Проверяется занавес именно ПРИХОДЯЩИЙ: у уходящего то же имя и тот же класс,
+    отличается направление.
+  */
+  const curtain = page.getByTestId("pa-curtain");
+  await expect(curtain).toHaveAttribute("data-direction", "in");
+  await expect(curtain).toHaveCount(0, { timeout: 4000 });
+
+  await expect(page).toHaveURL(/\/a3$/);
+  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+  await expect(page.locator(".pa-huge")).toHaveText("A3");
+
+  /*
+    🔴 Плакат не мелькает по дороге.
+
+    Синий экран приходил спуском 0.72 с, и всё это время под ним был виден
+    главный экран — владелец поймал это сразу: «успевает проскальзывать
+    стартовый экран». По адресу экран обязан быть открыт с первого кадра, а
+    заглушка на время подгрузки чанка — кобальтовой, а не чернильной.
+  */
+  const plane = page.getByTestId("pa-sheet-plane");
+  await expect(plane).toHaveCSS("clip-path", /inset\(0%\)|none/);
+});
+
+test("прямой заход на маршрут компании открывает синий экран", async ({ page }) => {
+  await page.goto(portfolioUrl("/a3"));
+
+  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+  // Неизвестная компания в адресе — обычный архив, а не ошибка.
+  await page.goto(portfolioUrl("/нет-такой"));
+  await expect(page.getByTestId("pa-sheet")).toHaveCount(0);
+  await expect(page.locator(".pa-cell").first()).toBeVisible();
+});
+
+/*
+ * 🔴 На странице кейса нет ничего сверх макета.
+ *
+ * Решение владельца 2026-08-14: «остальные блоки когда я доделаю я тебе скажу,
+ * а пока не надо вносить ничего своего». Сняты блок фактов «Клиент / Год /
+ * Срок / Работа», строка типа над именем, кобальтовая плашка под лидом,
+ * таблица «Что сделал / Результат», плоскость «Итог» и переход на соседний
+ * кейс. Их код и данные целы — вернутся, когда макет дорисуют.
+ *
+ * Проверка сторожит именно ОТСУТСТВИЕ: вернуть блок обратно легко, и заметить
+ * это на странице в восемь тысяч пикселей трудно.
+ */
+test("на странице кейса нет блоков вне макета", async ({ page }) => {
+  await page.goto(portfolioUrl("/a3/case/dashboard-redesign"));
+  await expect(page.getByTestId("pc-title")).toBeVisible();
+
+  for (const id of ["pc-facts", "pc-rows", "pc-impact", "pc-next"]) {
+    await expect(page.getByTestId(id), `Блок ${id} вернулся на страницу`).toHaveCount(0);
+  }
+
+  // Разделы — только те, что есть в макете, и в его порядке.
+  const kickers = await page.locator(".pc-kicker").allTextContents();
+  expect(kickers.map((text) => text.trim())).toEqual([
+    "О проекте",
+    "Контекст",
+    "Проблемы до редизайна",
+  ]);
 });
 
 /*
@@ -101,10 +376,10 @@ test("страница кейса уводит на соседний кейс", 
  *
  * Плоскость компании уезжает вверх, и под ней УЖЕ отрисован кейс. Проверяются
  * оба условия разом: занавес существует и страница под ним готова. Раньше
- * `/archive` размонтировался целиком и кейс появлялся вспышкой.
+ * экран работ размонтировался целиком и кейс появлялся вспышкой.
  */
 test("с синего экрана кейс открывается закрытием плоскости", async ({ page }) => {
-  await page.goto(portfolioUrl("/archive"));
+  await page.goto(portfolioUrl());
 
   await page.getByTestId("pa-company-a3").click();
   const sheet = page.getByTestId("pa-sheet");
@@ -155,7 +430,7 @@ test("с синего экрана кейс открывается закрыт�
  * контейнер ничем не анимируется, и любой бордер на нём воспроизведёт дефект.
  */
 test("содержимое синего экрана не появляется раньше плоскости", async ({ page }) => {
-  await page.goto(portfolioUrl("/archive"));
+  await page.goto(portfolioUrl());
 
   await page.getByTestId("pa-company-a3").click();
   await expect(page.getByTestId("pa-sheet")).toBeVisible();
@@ -184,7 +459,7 @@ test("содержимое синего экрана не появляется �
  * делал про занавес на кейс. Проверка ловит возврат к спешке.
  */
 test("возврат к списку идёт в темпе прихода", async ({ page }) => {
-  await page.goto(portfolioUrl("/archive"));
+  await page.goto(portfolioUrl());
   await page.getByTestId("pa-company-a3").click();
   await expect(page.getByTestId("pa-sheet")).toBeVisible();
   await expect(page.getByTestId("pa-back")).toHaveCSS("opacity", "1", { timeout: 3000 });
@@ -213,7 +488,7 @@ test("возврат к списку идёт в темпе прихода", asy
  * видно НИЖЕ неё. Порог 0.2 — не «совсем прозрачно», а «уже не читается».
  */
 test("содержимое синего экрана не переживает кромку плоскости", async ({ page }) => {
-  await page.goto(portfolioUrl("/archive"));
+  await page.goto(portfolioUrl());
   await page.getByTestId("pa-company-a3").click();
   await expect(page.getByTestId("pa-back")).toHaveCSS("opacity", "1", { timeout: 3000 });
 
@@ -273,7 +548,7 @@ test("содержимое синего экрана не переживает �
  * растянуть до 1.0 — «как-то резко» лечилось не длительностью, а кривой.
  */
 test("занавес на кейс идёт в темпе открытия", async ({ page }) => {
-  await page.goto(portfolioUrl("/archive"));
+  await page.goto(portfolioUrl());
   await page.getByTestId("pa-company-a3").click();
   await expect(page.getByTestId("pa-sheet")).toBeVisible();
 

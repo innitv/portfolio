@@ -8,3 +8,6 @@ test-results/
 !.env.*.example
 .DS_Store
 Thumbs.db
+
+# Лог дев-сервера: пишется при запуске в фоне, в репозитории не нужен.
+dev.log

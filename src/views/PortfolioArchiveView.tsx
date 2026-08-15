@@ -66,13 +66,47 @@ const FONTS_TIMEOUT = 600
 const COLOR_SPEC = "#044AB3 · контраст к белому 7,97 : 1 · основной цвет системы"
 
 export interface PortfolioArchiveViewProps {
-  /** Переход на главную сайта. Без него верхняя строка остаётся текстом. */
-  onHome?: () => void
+  /**
+   * Компания, синий экран которой раскрыт. Приходит ИЗ АДРЕСА: `/` — ни одной,
+   * `/a3` — А3.
+   *
+   * 🔴 Вид управляемый, и это не стилистика. Пока раскрытая компания жила
+   * внутри вида, адрес и экран расходились в обе стороны: нажатие на имя
+   * открывало синий экран, не меняя `/`, а закрытие экрана на `/a3` оставляло
+   * `/a3` в строке при показанном ряде имён. Обновление страницы в обоих
+   * случаях показывало не то, на что человек смотрел. Поймано 2026-08-15
+   * обходом всех переходов; ни одна ось приёмки этот класс не видит — экран
+   * верный, содержимое верное, врёт только адрес.
+   */
+  companyId?: CompanyId
+  /**
+   * Показать синий экран сразу открытым, без спуска.
+   *
+   * 🔴 Решает МАРШРУТ, а не вид: только он знает, откуда человек пришёл. Спуск
+   * идёт с главной — и нажатием на имя, и кнопкой «вперёд» в браузере; заход по
+   * ссылке и возврат с кейса открывают экран сразу, иначе из-под уходящего
+   * занавеса видно, как плоскость едет второй раз, и мелькает ряд имён.
+   *
+   * Вид пробовал вычислять это сам, по факту нажатия внутри себя, и дважды
+   * ошибался: сначала открывал нажатием мгновенно вместо спуска, потом не знал
+   * про кнопки браузера, из-за чего «вперёд» на компанию шло без движения.
+   */
+  instant?: boolean
+  /** Закрытие синего экрана: маршрут уходит на главную. */
+  onCloseCompany?: () => void
+  /** Раскрытие компании нажатием на её имя: маршрут уходит на `/<companyId>`. */
+  onOpenCompany?: (companyId: CompanyId) => void
   /** Переход на страницу кейса из строки на синем экране. */
   onOpenCase?: (companyId: CompanyId, caseId: string) => void
 }
 
-export function PortfolioArchiveView({ onHome, onOpenCase }: PortfolioArchiveViewProps) {
+export function PortfolioArchiveView({
+  companyId: openId,
+  instant = true,
+  onCloseCompany,
+  onOpenCompany,
+  onOpenCase,
+}: PortfolioArchiveViewProps) {
   /*
    * Системная настройка «уменьшить движение» этот экран НЕ гасит — решение
    * владельца 2026-08-13. Разбор: движение здесь и есть содержание, а не
@@ -107,7 +141,15 @@ export function PortfolioArchiveView({ onHome, onOpenCase }: PortfolioArchiveVie
     }
   }, [])
 
-  const [openId, setOpenId] = React.useState<CompanyId | undefined>(undefined)
+  /*
+   * Экран открыт адресом, а не нажатием, — значит спуск не играется.
+   *
+   * Различить их можно только по тому, КАК изменилась раскрытая компания:
+   * нажатие внутри экрана взводит признак перед сменой маршрута, а заход по
+   * адресу, возврат с кейса и кнопка «назад» в браузере его не трогают. При
+   * первом рендере признака нет — заход на `/a3` показывает экран сразу
+   * открытым, без лишнего спуска.
+   */
   const company: ArchiveCompany | undefined = archiveCompanies.find((item) => item.id === openId)
 
   // Узел, с которого открыли синий экран: на него возвращается фокус.
@@ -131,11 +173,11 @@ export function PortfolioArchiveView({ onHome, onOpenCase }: PortfolioArchiveVie
   }, [])
 
   const closeCompany = React.useCallback(() => {
-    setOpenId((current) => {
-      if (current) cellsRef.current.get(current)?.focus()
-      return undefined
-    })
-  }, [])
+    // Фокус возвращается на ту ячейку, с которой экран открыли, — до смены
+    // маршрута: после неё синего экрана в дереве уже нет.
+    if (openId) cellsRef.current.get(openId)?.focus()
+    onCloseCompany?.()
+  }, [onCloseCompany, openId])
 
   /** Проявление блока при заходе: индекс задаёт место в лесенке. */
   const reveal = (index: number) => ({
@@ -148,22 +190,40 @@ export function PortfolioArchiveView({ onHome, onOpenCase }: PortfolioArchiveVie
     },
   })
 
-  const email = contacts.find((channel) => channel.label === "email")
-
   return (
     <div className="pa-root" data-testid="pa-root">
       <div aria-hidden="true" className="pa-grid" data-testid="pa-grid" />
 
       <div className="pa-screen">
         <motion.div className="pa-top" data-testid="pa-top" {...reveal(REVEAL_ORDER.top)}>
-          {onHome ? (
-            <button className="pa-home" data-testid="pa-home" onClick={onHome} type="button">
-              портфолио · 2026
-            </button>
-          ) : (
-            <span>портфолио · 2026</span>
-          )}
-          <span>{email?.href.replace("mailto:", "") ?? ""}</span>
+          {/*
+            Слева подпись, а не кнопка: этот экран и есть главная сайта, вести
+            с неё на саму себя не за чем. На странице кейса та же строка —
+            кнопка, и там она ведёт сюда.
+          */}
+          <span>портфолио · 2026</span>
+
+          {/*
+            Справа все каналы связи, а не одна почта: прежняя главная держала
+            их строкой внизу, и при переносе дизайна они были бы потеряны —
+            решение владельца 2026-08-15 оставить на главной именно ссылки.
+            Порядок и подписи взяты из данных, ничего не сочинено.
+          */}
+          <span className="pa-contacts" data-testid="pa-contacts">
+            {contacts.map((channel) => (
+              <a
+                className="pa-contact"
+                href={channel.href}
+                key={channel.label}
+                rel={channel.external ? "noreferrer" : undefined}
+                target={channel.external ? "_blank" : undefined}
+              >
+                {channel.label === "email"
+                  ? channel.href.replace("mailto:", "")
+                  : channel.label}
+              </a>
+            ))}
+          </span>
         </motion.div>
 
         <div className="pa-title">
@@ -194,7 +254,7 @@ export function PortfolioArchiveView({ onHome, onOpenCase }: PortfolioArchiveVie
                 <button
                   className="pa-cell"
                   data-testid={`pa-company-${item.id}`}
-                  onClick={() => setOpenId(item.id)}
+                  onClick={() => onOpenCompany?.(item.id)}
                   ref={(node) => {
                     if (node) cellsRef.current.set(item.id, node)
                     else cellsRef.current.delete(item.id)
@@ -214,7 +274,16 @@ export function PortfolioArchiveView({ onHome, onOpenCase }: PortfolioArchiveVie
         </motion.div>
       </div>
 
-      <ArchiveSheet company={company} onClose={closeCompany} onOpenCase={onOpenCase} />
+      <ArchiveSheet
+        company={company}
+        /*
+          Спускать или показать сразу — решение маршрута: он единственный знает,
+          пришёл человек с главной (спуск) или по ссылке и с кейса (сразу).
+        */
+        instant={instant}
+        onClose={closeCompany}
+        onOpenCase={onOpenCase}
+      />
     </div>
   )
 }

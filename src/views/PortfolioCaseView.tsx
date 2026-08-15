@@ -4,7 +4,11 @@ import { useSmoothScroll } from "@/components/portfolio/use-smooth-scroll";
 
 import {
   contacts,
+  imageFallback,
+  imageKeyFromSrc,
+  imageSrcSet,
   type CaseDetailSection,
+  type CaseImage,
   type CaseStudy,
   type Company,
 } from "./portfolio.data";
@@ -47,6 +51,40 @@ export interface PortfolioCaseViewProps {
   onOpenCompany: () => void;
 }
 
+/**
+ * Показ страницы кейса.
+ *
+ * 🔴 Кадр берётся из ЛОКАЛЬНОГО манифеста, а не по внешнему URL из данных.
+ * Оптимизированные webp в пяти ширинах лежат в `public/assets/optimized/`, но
+ * до 2026-08-14 их подключал только `case-figure.tsx` — компонент старой темы,
+ * которую с 13 августа не открывает ни один маршрут. Чернильная страница
+ * рендерила `<img src={image.src}>` напрямую и тянула тяжёлые PNG с внешнего
+ * домена: кадр «до» (2160 × 1350) не догружался за 2.5 с, локальный webp того
+ * же размера весит 60 КБ.
+ *
+ * Внешний адрес остаётся резервом: кадра может не быть в манифесте, и тогда
+ * лучше показать тяжёлый PNG, чем пустую рамку.
+ */
+function CaseShot({ eager, image }: { eager?: boolean; image: CaseImage }) {
+  const key = imageKeyFromSrc(image.src);
+
+  return (
+    <figure className="pc-shot">
+      <div className="pc-shot-frame">
+        <img
+          alt={image.alt}
+          decoding="async"
+          loading={eager ? "eager" : "lazy"}
+          sizes="(max-width: 899px) calc(100vw - 40px), min(1320px, calc(100vw - 120px))"
+          src={key ? imageFallback(key) : image.src}
+          srcSet={key ? imageSrcSet(key) : undefined}
+        />
+      </div>
+      <figcaption>{image.caption}</figcaption>
+    </figure>
+  );
+}
+
 /** Показы, вытащенные из секции: `image` и `images` приходят вперемешку. */
 function sectionShots(section: CaseDetailSection) {
   const single = section.image ? [section.image] : [];
@@ -68,19 +106,23 @@ function sectionShots(section: CaseDetailSection) {
 const LEAD_MAX = 180;
 
 /**
- * ─── ТЕКСТОВЫЕ БЛОКИ ЧЕРЕДУЮТСЯ ПО ГОРИЗОНТАЛИ ────────────────────────────────
- * Решение владельца 2026-08-14 по макету 88:248: первый блок стоит на трети
- * ширины, второй от левого поля, третий снова на трети — и так далее. Кадры
- * между ними всегда идут от левого поля во всю ширину, поэтому текст то
- * совпадает с их краем, то отступает; это и есть ось макета.
+ * ─── БЛОКИ ЧЕРЕДУЮТСЯ: ТРЕТЬ → ПОЛЕ → ТРЕТЬ ─────────────────────────────────
+ * Правило снято координатами из макета 95:1004, а не выведено на глаз:
  *
- * Приём заменил прежнюю силовую линию (весь текст на одной вертикали 34 %,
- * приём `wemakefab.ru`, принят 13 августа и прожил сутки).
+ *   «О проекте»              left `calc(33.33% + 31)` = 671  → треть
+ *   «Контекст»               left 60                        → поле
+ *   «Проблемы до редизайна»  left 611 внутри блока на 60    → треть
  *
- * Чередование считается по порядку ТЕКСТОВЫХ блоков, а не по индексу раздела:
- * между ними стоят кадры, и они на чётность не влияют.
+ * 🔴 Я дважды ошибался в этом месте, и оба раза потому, что смотрел на часть
+ * макета. По первой редакции завёл чередование, по второй решил, что оно
+ * отменено и смещён только вводный блок, — а в полном кадре видно, что
+ * чередование есть, просто разделов в макете три, и второй из них стоит у поля.
+ *
+ * У «Проблем» смещены МЕТКА И ТЕЗИС, а нумерованный список остаётся от поля:
+ * список сам держит две вертикали номером и текстом, и сдвигать его целиком
+ * значило бы увести текст пункта на две трети ширины.
  */
-function shifted(textBlock: number): boolean {
+function isShifted(textBlock: number): boolean {
   return textBlock % 2 === 0;
 }
 
@@ -114,7 +156,35 @@ export function PortfolioCaseView({
    */
   useSmoothScroll();
 
-  const sections = caseStudy.detailSections ?? [];
+  /*
+    ─── НА СТРАНИЦЕ ТОЛЬКО ТО, ЧТО ЕСТЬ В МАКЕТЕ ─────────────────────────────
+    Решение владельца 2026-08-14: «остальные блоки когда я доделаю я тебе скажу,
+    а пока не надо вносить ничего своего». В макете `95:1004` текстовых разделов
+    ровно два — «Контекст» и «Проблемы до редизайна», — и порядок их тоже
+    оттуда.
+
+    Остальные разделы данных («Цель», «Продуктовые гипотезы», «Что сделал»,
+    «Метрики успеха», «Бизнес-эффект») из вида убраны, но НЕ удалены из данных:
+    владелец дорисует макет и скажет, куда их вернуть.
+
+    🔴 Список меток — единственное место, где задан состав страницы. Меняется он
+    вместе с макетом и только по слову владельца.
+  */
+  const MACET_SECTIONS = ["Контекст", "Проблемы до редизайна"];
+
+  const sections = (caseStudy.detailSections ?? []).filter((section) =>
+    section.kicker ? MACET_SECTIONS.includes(section.kicker) : false,
+  );
+
+  /*
+    Кадры для блока «О проекте» — пара мокапов из макета. В данных они лежат в
+    разделе «Что сделал», который сейчас не показывается; забираем их оттуда,
+    чтобы пара не пропала со страницы вместе с ним.
+  */
+  const introShots = (caseStudy.detailSections ?? [])
+    .filter((section) => !MACET_SECTIONS.includes(section.kicker ?? ""))
+    .flatMap(sectionShots)
+    .slice(0, 2);
 
   /** Соседний кейс той же компании — увести дальше, а не оборвать страницу. */
   const next = React.useMemo(() => {
@@ -133,13 +203,21 @@ export function PortfolioCaseView({
       */}
       <div className="pc-screen">
         <div className="pc-top">
+          {/*
+            🔴 «кейсы», а не «все работы». Обе строки шапки ведут вверх, но в
+            разные места: эта — к кейсам своей компании, соседняя — на главную.
+            Пока здесь стояло «← А3 · все работы», а на экране компании «← все
+            работы», одинаковые слова означали два разных перехода: владелец
+            нажимал здесь, ожидая главную, и попадал на синий экран компании —
+            «с кобальта переносит на кобальт» (2026-08-15).
+          */}
           <button
             className="pc-back"
             data-testid="pc-back"
             onClick={onOpenCompany}
             type="button"
           >
-            ← {company.name} · все работы
+            ← кейсы {company.name}
           </button>
           <button
             className="pc-home"
@@ -151,64 +229,38 @@ export function PortfolioCaseView({
           </button>
         </div>
 
+        {/*
+          ─── ШАПКА КЕЙСА: ИМЯ И ЛИД, БОЛЬШЕ НИЧЕГО ─────────────────────────
+          Состав из макета 95:1004, проверен по описи: над именем НЕТ ничего,
+          под именем — один моноширинный лид, плашек нет.
+
+          Что снято 2026-08-14 по разбору владельца: строка «I · UX Research ·
+          Redesign» над именем («на моём макете над названием кейса нет никаких
+          надписей») и кобальтовая плашка `impact` под лидом («нет никаких синих
+          плашек»).
+
+          Лид — `summary`, а не `subtitle`: в макете под именем стоит фраза
+          «Главный экран стал рабочим дашбордом…», и это ровно `summary`.
+        */}
         <header className="pc-head">
-          <div className="pc-index">
-            {caseStudy.index} · {caseStudy.type}
-          </div>
           <h1 className="pc-title" data-testid="pc-title">
             {caseStudy.title}
           </h1>
-          <p className="pc-lede">{caseStudy.subtitle}</p>
-          {caseStudy.impact ? (
-            <div className="pc-impact-line">{caseStudy.impact}</div>
-          ) : null}
+          <p className="pc-lede">{caseStudy.summary}</p>
         </header>
 
         {caseStudy.coverImage ? (
           <div className="pc-shots" data-testid="pc-hero" data-wide="true">
-            <figure className="pc-shot">
-              <div className="pc-shot-frame">
-                <img
-                  alt={caseStudy.coverImage.alt}
-                  loading="eager"
-                  src={caseStudy.coverImage.src}
-                />
-              </div>
-              <figcaption>{caseStudy.coverImage.caption}</figcaption>
-            </figure>
+            <CaseShot eager image={caseStudy.coverImage} />
           </div>
         ) : null}
 
         {/*
-          ─── ФАКТЫ СТРОКОЙ, А НЕ КОЛОНКОЙ ──────────────────────────────────
-          Липкая колонка слева прожила один показ и снята владельцем: «лишняя
-          информация, отвлекает». Возражение по делу — колонка держала в поле
-          зрения то, что человек уже прочитал в шапке, и весь текст при этом
-          уезжал к середине экрана.
-
-          Теперь факты стоят один раз строкой под героем, а текст идёт от левого
-          поля. Это ближе и к кадру 82:206, и к wemakefab: у обоих факты живут в
-          шапке кейса, а не сопровождают чтение.
+          Блока фактов «Клиент / Год / Срок / Работа» здесь больше нет: в макете
+          его нет, и владелец сказал об этом трижды (2026-08-14). Данные
+          `year`, `duration`, `type` остаются в `portfolio.data.ts` — их читает
+          карточка кейса на разводящей.
         */}
-        <div className="pc-facts" data-testid="pc-facts">
-          <div className="pc-fact">
-            <div className="pc-label">Клиент</div>
-            <div className="pc-value">{company.name}</div>
-          </div>
-          <div className="pc-fact">
-            <div className="pc-label">Год</div>
-            <div className="pc-value">{caseStudy.year}</div>
-          </div>
-          <div className="pc-fact">
-            <div className="pc-label">Срок</div>
-            <div className="pc-value">{caseStudy.duration}</div>
-          </div>
-          <div className="pc-fact">
-            <div className="pc-label">Работа</div>
-            <div className="pc-value">{caseStudy.type}</div>
-          </div>
-        </div>
-
         <div className="pc-body" data-testid="pc-body">
           <div className="pc-flow">
             {/*
@@ -222,24 +274,53 @@ export function PortfolioCaseView({
               раздела «Задача», заголовки разделов данных — `pc-part`, остальное
               абзацы и списки основным кеглем.
             */}
-            <section className="pc-section" data-shift={shifted(0)}>
-              <p className="pc-lead" data-testid="pc-lead">
-                {caseStudy.summary}
+            {/*
+              ─── «О ПРОЕКТЕ» — ПЕРВЫЙ БЛОК МАКЕТА ───────────────────────────
+              Устройство ровно как у разделов: метка → тезис → описание. В
+              макете он стоит на трети ширины и открывает текст страницы.
+
+              Блока «Задача» здесь больше нет: в макете его нет, а его тезис
+              (`problem`) и есть тезис «О проекте». Раньше эти два блока стояли
+              подряд и оба на трети, отчего сбивалась фаза чередования.
+            */}
+            <section
+              className="pc-section"
+              /*
+                Вводный блок у́же смещённого раздела: в макете он 904 (шесть
+                колонок), а тезис «Проблем» — 1036 (семь). Разница задана
+                признаком, а не общим правилом для всех смещённых блоков.
+              */
+              data-intro="true"
+              data-shift={isShifted(0)}
+              data-testid="pc-problem"
+            >
+              <div className="pc-kicker">О проекте</div>
+              <p className="pc-part" data-testid="pc-lead" data-thesis="true" data-tight="true">
+                {caseStudy.problem}
               </p>
               <p className="pc-section-text">{caseStudy.context}</p>
             </section>
 
-            <section
-              className="pc-section"
-              data-shift={shifted(1)}
-              data-testid="pc-problem"
-            >
-              <div className="pc-label">Задача</div>
-              <p className="pc-lead">{caseStudy.problem}</p>
-            </section>
+            {/*
+              Пара кадров стоит СРАЗУ за «О проекте» — так в макете (мокапы на
+              top 1780, между вводным блоком и «Контекстом»). Кадры принадлежат
+              блоку, за которым идут, поэтому лежат в его данных.
+            */}
+            {introShots.length ? (
+              <div className="pc-shots" data-testid="pc-intro-shots">
+                {introShots.map((shot) => (
+                  <CaseShot image={shot} key={shot.src} />
+                ))}
+              </div>
+            ) : null}
 
-            {sections.map((section, index) => {
+            {sections.map((section, sectionIndex) => {
               const shots = sectionShots(section);
+              /*
+                Чередование продолжается за «О проекте»: он занял треть, значит
+                первый раздел — «Контекст» — идёт от поля, как в макете.
+              */
+              const shifted = isShifted(sectionIndex + 1);
               /*
                 Размеченный раздел несёт тезис в самом заголовке: `title` — это
                 первое предложение содержания, набранное крупно (макет 88:248).
@@ -259,10 +340,7 @@ export function PortfolioCaseView({
 
               return (
                 <React.Fragment key={section.title}>
-                  <section
-                    className="pc-section"
-                    data-shift={shifted(index + 2)}
-                  >
+                  <section className="pc-section" data-shift={shifted}>
                     {/*
                       Метка над тезисом: «Контекст», «Цель», «Итоги». Она
                       отвечает на вопрос «что это за блок», а крупная строка под
@@ -285,18 +363,41 @@ export function PortfolioCaseView({
                       </p>
                     ))}
                     {/*
-                      Пункты — абзацы, а не список: ни маркеров, ни собственных
-                      заголовков у них нет (макет 88:248, решение владельца
-                      2026-08-14). Разметку `{lead, text}` пробовали часом
-                      раньше и сняли вместе с маркерами — механика удалена,
-                      чтобы не осталось второго способа набрать то же самое.
+                      ─── ПУНКТЫ РАЗМЕЧЕННОГО РАЗДЕЛА — НУМЕРОВАННЫЙ СПИСОК ──
+                      Вторая редакция макета 88:248 (владелец, 2026-08-14,
+                      вечер): над каждым пунктом линия во всю ширину блока, под
+                      ней номер у левого поля и текст на вертикали сдвига.
+
+                      Номер СЧИТАЕТСЯ от порядка пункта, а не хранится в тексте:
+                      в макете у «Проблем» пятый пункт подписан «4», и ручная
+                      нумерация законсервировала бы эту опечатку.
+
+                      Номер скрыт от диктора: список и без него объявляется
+                      нумерованным, а видимая цифра прочиталась бы второй раз.
+
+                      Пункты семи остальных кейсов остаются абзацами: у них нет
+                      `kicker`, они не размечены по этому макету и трогать их
+                      владелец не просил.
                     */}
                     {section.items ? (
-                      <ul className="pc-section-text">
-                        {section.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
+                      marked ? (
+                        <ol className="pc-items" data-testid="pc-items">
+                          {section.items.map((item, order) => (
+                            <li className="pc-item" key={item}>
+                              <span aria-hidden="true" className="pc-item-num">
+                                {order + 1}
+                              </span>
+                              <p className="pc-item-text">{item}</p>
+                            </li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <ul className="pc-section-text">
+                          {section.items.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      )
                     ) : null}
                     {section.quote ? (
                       <p className="pc-lead">«{section.quote}»</p>
@@ -304,14 +405,19 @@ export function PortfolioCaseView({
                   </section>
 
                   {shots.length ? (
-                    <div className="pc-shots" data-wide={shots.length === 1}>
+                    /*
+                      `data-in-section` — не украшение: кадр раздела отбит от его
+                      текста на 69 из макета (52 при 1440), а не на 240, как
+                      самостоятельный блок. Кадр героя такого атрибута не несёт и
+                      живёт своей отбивкой.
+                    */
+                    <div
+                      className="pc-shots"
+                      data-in-section="true"
+                      data-wide={shots.length === 1}
+                    >
                       {shots.map((shot) => (
-                        <figure className="pc-shot" key={shot.src}>
-                          <div className="pc-shot-frame">
-                            <img alt={shot.alt} loading="lazy" src={shot.src} />
-                          </div>
-                          <figcaption>{shot.caption}</figcaption>
-                        </figure>
+                        <CaseShot image={shot} key={shot.src} />
                       ))}
                     </div>
                   ) : null}
@@ -319,59 +425,17 @@ export function PortfolioCaseView({
               );
             })}
 
-            {/* Строками с линиями — приём «Что под капотом» из кадра владельца. */}
-            <div className="pc-rows" data-testid="pc-rows">
-              <div className="pc-row">
-                <div className="pc-label">Что сделал</div>
-                <ul>
-                  {caseStudy.solution.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="pc-row">
-                <div className="pc-label">Результат</div>
-                <ul>
-                  {caseStudy.result.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
             {/*
-          Кобальтовая плоскость — та же, что приходит синим экраном компании на
-          `/archive`. Числа берутся из данных как есть: разбирать проценты из
-          фраз регуляркой значило бы придумывать метрики, которых в кейсе нет.
-        */}
-            <section className="pc-impact" data-testid="pc-impact">
-              <div className="pc-label pc-label--on-cobalt">Итог</div>
-              <div className="pc-impact-grid">
-                {caseStudy.result.map((item) => (
-                  <div key={item}>
-                    <div className="pc-metric-value">{caseStudy.impact}</div>
-                    <div className="pc-metric-caption">{item}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
+              🔴 Здесь стояли таблица «Что сделал / Результат», кобальтовая
+              плоскость «Итог» и переход на соседний кейс. Все три сняты
+              2026-08-14: в макете `95:1004` их нет, а владелец сказал прямо —
+              «остальные блоки когда я доделаю я тебе скажу, а пока не надо
+              вносить ничего своего».
 
-            {next && next.id !== caseStudy.id ? (
-              <nav className="pc-next" data-testid="pc-next">
-                <div className="pc-label">Следующий кейс</div>
-                <button
-                  className="pc-next-card"
-                  onClick={() => onOpenCase?.(next.id)}
-                  style={{ marginBlockStart: 20 }}
-                  type="button"
-                >
-                  <span className="pc-next-title">{next.title}</span>
-                  <span className="pc-next-meta">
-                    {next.year} · {next.impact}
-                  </span>
-                </button>
-              </nav>
-            ) : null}
+              Код и данные для них целы (`solution`, `result`, `impact`,
+              соседний кейс считается тут же) — вернуть их будет правкой в
+              несколько строк, когда макет дорисуют.
+            */}
           </div>
         </div>
 
