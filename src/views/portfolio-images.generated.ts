@@ -1,7 +1,7 @@
 /**
  * Манифест оптимизированных кадров портфолио — СГЕНЕРИРОВАН, руками не правится.
  *
- * Источник: public/assets/optimized (78 файлов webp, скопированы
+ * Источник: public/assets/optimized (83 файла webp, скопированы
  * из C:/Project/siteportfolio/public/assets/optimized). Ключ — базовое имя файла
  * без суффикса ширины; значение — доступные ширины по возрастанию.
  *
@@ -18,6 +18,11 @@ export interface OptimizedImage {
 export const optimizedImages = {
   "35KZ4z8mfO8o60nT7OmQ5Pdu8o": { widths: [480, 768, 1120, 1600, 2880] },
   "TgXHntK01EHbrcKym9ipP0rttXU": { widths: [480, 768, 1120, 1600, 2720] },
+  "a3-dashboard-redesign-mobile-Av9emCe4": { widths: [480, 768, 856] },
+  "a3-dashboard-redesign-hero-tablet-KPENHxhA": { widths: [480, 768, 1120, 1600, 1972] },
+  "a3-dashboard-redesign-components-UbGwkxu2": { widths: [480, 768, 1120, 1600, 2054] },
+  "a3-dashboard-redesign-before-mobile-C8RFrL70": { widths: [480, 768, 856] },
+  "a3-dashboard-redesign-before-FUsH1gNh": { widths: [480, 768, 1120, 1600, 1972] },
   "a3-dashboard-redesign-figma-hero-BMeVnBgb": { widths: [480, 768, 1120, 1600, 2160] },
   "a3-dashboard-redesign-figma-main-card-CSycQJK_": { widths: [480, 717] },
   "a3-dashboard-redesign-slider-left-D6iXZ8kI": { widths: [480, 567] },

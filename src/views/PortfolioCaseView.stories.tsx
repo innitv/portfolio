@@ -38,14 +38,51 @@ export const FullPage: Story = {
 
     await expect(canvas.getByTestId("pc-title")).toHaveTextContent(study.title)
 
-    // Каждый показ подписан. Это приём из кадра владельца и главное отличие от
-    // девяти живых сайтов из десяти: скриншот интерфейса без подписи заставляет
-    // читателя гадать, на что смотреть.
-    const shots = canvasElement.querySelectorAll(".pc-shot")
-    const captions = canvasElement.querySelectorAll(".pc-shot figcaption")
+    /*
+      Каждый показ подписан. Это приём из кадра владельца и главное отличие от
+      девяти живых сайтов из десяти: скриншот интерфейса без подписи заставляет
+      читателя гадать, на что смотреть.
+
+      🔴 Считаются показы С ИЗОБРАЖЕНИЕМ. С 2026-08-16 на странице есть ещё и
+      пустое место под кадр «Контекста»: в макете кадр там есть, а изображения у
+      кейса пока нет. Подписи у места нет намеренно — её напишет владелец вместе
+      с кадром, и требовать её здесь значило бы требовать выдуманный текст.
+    */
+    const shots = canvasElement.querySelectorAll(".pc-shot:has(img)")
+    const captions = canvasElement.querySelectorAll(".pc-shot:has(img) figcaption")
     await expect(captions).toHaveLength(shots.length)
     for (const caption of captions) {
       await expect(caption.textContent?.trim().length ?? 0).toBeGreaterThan(0)
+    }
+
+    /*
+      🔴 Пустых мест под кадр на странице больше НЕТ.
+
+      Место под «Контекстом» пустовало с 2026-08-16, а 17 августа владелец решил
+      его судьбу: «отобрази флоу, который описывается выше — схематично, чтобы не
+      грузить рисунками». Вместо кадра там теперь схема пути, и она занимает то
+      же место той же ширины. Левая половина пары «Проблем» получила мобильный
+      кадр ещё вечером 16-го.
+
+      Проверяется обе половины разом: пустых мест ноль И схема на месте. Иначе
+      исчезновение схемы прошло бы как «стало на одно пустое место меньше».
+    */
+    await expect(canvasElement.querySelectorAll("[data-empty='true']")).toHaveLength(0)
+    await expect(canvas.getByTestId("pc-path")).toBeVisible()
+
+    /*
+      Схема — это путь, а не набор плашек: у каждой дорожки своя задача и свои
+      шаги. Сторожится состав, потому что «схема есть» ещё не значит «схема
+      показывает путь»: на первой сборке линии уходили к случайным ступеням
+      входа, и блок утверждал «Вход → Проверить платежи».
+    */
+    const tracks = canvasElement.querySelectorAll(".pc-path-track")
+    await expect(tracks).toHaveLength(4)
+    for (const track of tracks) {
+      await expect(track.querySelectorAll("[data-role='task']")).toHaveLength(1)
+      await expect(
+        track.querySelectorAll("[data-role='step']").length,
+      ).toBeGreaterThan(0)
     }
 
     // Первый блок макета — «О проекте» — на месте.
@@ -72,8 +109,17 @@ export const FullPage: Story = {
       час назад у каждого пункта был мини-заголовок, владелец их отменил.
     */
     const kickers = [...canvasElement.querySelectorAll(".pc-kicker")]
-    // Разделов ровно три — столько их в макете 95:1004.
-    await expect(kickers.length, "Разделов не три").toBe(3)
+    /*
+      Разделов ровно пять, и каждый появился по отдельной фразе владельца:
+      «О проекте», «Контекст», «Проблемы до редизайна» из макета `95:1004`,
+      «Продуктовые гипотезы» 2026-08-16 вместе с карточками `124:2018`,
+      «Бизнес-эффект» 2026-08-17 — под блоком крупных цифр.
+
+      🔴 Число сторожится точным, а не «не меньше»: смысл в том, что страница не
+      обрастает разделами сама. Данные кейса содержат ещё «Цель», «Что сделал» и
+      «Метрики успеха» — они рядом, и вернуться в вид могут только по его слову.
+    */
+    await expect(kickers.length, "Разделов не пять").toBe(5)
 
     for (const kicker of kickers) {
       const part = kicker.nextElementSibling
@@ -158,15 +204,41 @@ export const IntroShift: Story = {
 
     const box = screen.getBoundingClientRect()
     const field = Number.parseFloat(getComputedStyle(screen).paddingLeft)
-    const column = (box.width - field * 2) / 12
+    /*
+      🔴 У сетки ЕСТЬ желоб, и колонка считается с его учётом: внутренняя
+      ширина за вычетом одиннадцати желобов, делённая на двенадцать. При 1920
+      это 120.67 при желобе 32, а не 150.
 
-    /** Положение края в колонках сетки, с точностью до десятой. */
+      Пока проверка делила ширину на 12 без желоба, она подтверждала неверную
+      модель: блок на 611 читался как «4.07 колонки», и расхождение списывали на
+      то, что владелец «не доводил блоки до направляющих». На самом деле его
+      величины ложатся на сетку точно (2026-08-16).
+    */
+    const gutter = Number.parseFloat(
+      getComputedStyle(canvasElement.querySelector<HTMLElement>(".pc-flow")!).columnGap,
+    )
+    const column = (box.width - field * 2 - gutter * 11) / 12
+    const step = column + gutter
+
+    /** Начало колонки, с точностью до десятой. */
     const col = (value: number) =>
-      Math.round(((value - box.left - field) / column) * 10) / 10
+      Math.round(((value - box.left - field) / step) * 10) / 10
+
+    /*
+     * Правый край: последняя колонка не имеет желоба за собой, поэтому граница
+     * считается со сдвигом на желоб. Иначе конец двенадцатой колонки читается
+     * как 11.8 — блок «не доходит до поля», хотя доходит ровно.
+     */
+    const colEnd = (value: number) =>
+      Math.round(((value - box.left - field + gutter) / step) * 10) / 10
 
     const blocks = [...canvasElement.querySelectorAll(".pc-flow > .pc-section")]
-    // Три текстовых блока: «О проекте», «Контекст», «Проблемы до редизайна».
-    await expect(blocks.length, "Текстовых блоков не три").toBe(3)
+    /*
+      Пять текстовых блоков: «О проекте», «Контекст», «Проблемы до редизайна»,
+      «Продуктовые гипотезы» (2026-08-16, карточки `124:2018`) и «Бизнес-эффект»
+      (2026-08-17, под блоком крупных цифр).
+    */
+    await expect(blocks.length, "Текстовых блоков не пять").toBe(5)
 
     const starts = blocks.map((block) => {
       const lead = block.querySelector(".pc-part, .pc-lead, .pc-label")
@@ -220,7 +292,7 @@ export const IntroShift: Story = {
     if (!shots) throw new Error("Кадров в потоке нет")
     const shotBox = shots.getBoundingClientRect()
     await expect(col(shotBox.left), "Кадр начинается не от поля").toBe(0)
-    await expect(col(shotBox.right), "Кадр не доходит до правого поля").toBe(12)
+    await expect(colEnd(shotBox.right), "Кадр не доходит до правого поля").toBe(12)
 
     // Сетки-подложки на светлой странице нет: она спорит со строками текста.
     await expect(canvasElement.querySelector(".pc-grid")).toBeNull()
@@ -275,13 +347,21 @@ export const NumberedItem: Story = {
     if (!screen) throw new Error("Страница кейса не собралась")
     const screenBox = screen.getBoundingClientRect()
     const field = Number.parseFloat(getComputedStyle(screen).paddingLeft)
-    const column = (screenBox.width - field * 2) / 12
+    // Колонка считается с желобом — см. разбор в истории про колонки сетки.
+    const gutter = Number.parseFloat(
+      getComputedStyle(canvasElement.querySelector<HTMLElement>(".pc-flow")!).columnGap,
+    )
+    const column = (screenBox.width - field * 2 - gutter * 11) / 12
+    const step = column + gutter
     const col = (value: number) =>
-      Math.round(((value - screenBox.left - field) / column) * 10) / 10
+      Math.round(((value - screenBox.left - field) / step) * 10) / 10
+    // Правый край считается со сдвигом на желоб — см. разбор выше.
+    const colEnd = (value: number) =>
+      Math.round(((value - screenBox.left - field + gutter) / step) * 10) / 10
 
     const itemBox = first.getBoundingClientRect()
     await expect(col(itemBox.left), "Линия начинается не от поля").toBe(0)
-    await expect(col(itemBox.right), "Линия не доходит до правого поля").toBe(12)
+    await expect(colEnd(itemBox.right), "Линия не доходит до правого поля").toBe(12)
 
     const numberBox = number.getBoundingClientRect()
     const textBox = text.getBoundingClientRect()
@@ -291,8 +371,8 @@ export const NumberedItem: Story = {
       `Текст пункта начинается на ${col(textBox.left)} колонке вместо четвёртой`,
     ).toBe(4)
     await expect(
-      col(textBox.right),
-      `Текст пункта кончается на ${col(textBox.right)} колонке вместо девятой`,
+      colEnd(textBox.right),
+      `Текст пункта кончается на ${colEnd(textBox.right)} колонке вместо девятой`,
     ).toBe(9)
 
     // Зазоры: линия → строка меньше, чем строка → следующая линия (20 к 32).

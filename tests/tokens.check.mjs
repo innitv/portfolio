@@ -56,7 +56,16 @@ function stripComments(text) {
 
 // ─── 1. Значения мимо токенов ────────────────────────────────────────────────
 for (const file of GUARDED) {
-  const source = stripComments(readFileSync(file, "utf8"))
+  /*
+   * 🔴 Объявление роли сворачивается в ОДНУ строку перед разбором. Значение
+   * может занимать несколько строк — так записан многострочный
+   * `linear-gradient`, — и построчная проверка видела его стопы как «цвет по
+   * месту», хотя они стоят внутри законного объявления (2026-08-16).
+   */
+  const source = stripComments(readFileSync(file, "utf8")).replace(
+    /^[ \t]*--[\w-]+[ \t]*:[^;]*;/gm,
+    (declaration) => declaration.replace(/\s*\n\s*/g, " "),
+  )
   const lines = source.split("\n")
 
   lines.forEach((line, index) => {

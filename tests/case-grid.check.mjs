@@ -47,11 +47,21 @@ const RATIO_TOLERANCE = 0.04;
  * Эталон из макета. `cols` — [начало, конец] в колонках, `ratio` — ширина/высота
  * подложки кадра. Пиксели макета оставлены в комментариях как источник числа.
  */
+/*
+ * 🔴 Числа ЦЕЛЫЕ, потому что сетка считается с желобом. В прежней модели
+ * (колонка = внутренняя/12, без желоба) те же блоки давали 5.07, 8.94, 11.98 —
+ * дробные хвосты, которые читались как «владелец не довёл блоки до
+ * направляющих». Хвосты были ошибкой расчёта: с желобом 32 его величины лежат
+ * на колонках ровно (2026-08-16).
+ *
+ * Дробные остались только у двух ролей, где ширина у владельца и правда
+ * свободная: имя кейса (1295) и лид (571).
+ */
 const EXPECTED = [
   // имя кейса 1295 из 1800
-  { id: 'title', selector: '.pc-title', nth: 0, cols: [1, 9.63] },
+  { id: 'title', selector: '.pc-title', nth: 0, cols: [1, 9.69] },
   // лид 571
-  { id: 'lede', selector: '.pc-lede', nth: 0, cols: [1, 4.81] },
+  { id: 'lede', selector: '.pc-lede', nth: 0, cols: [1, 4.95] },
   // кадр героя 1800 × 664
   {
     id: 'hero',
@@ -66,10 +76,10 @@ const EXPECTED = [
    * «О проекте» устроен как раздел (метка → тезис → описание), а роли
    *  на странице больше нет.
    */
-  { id: 'intro-lead', selector: '.pc-section[data-shift="true"] > .pc-part', nth: 0, cols: [5.07, 11.1], capped: true },
-  { id: 'intro-text', selector: '.pc-section[data-shift="true"] > p.pc-section-text', nth: 0, cols: [5.07, 11.1], capped: true },
+  { id: 'intro-lead', selector: '.pc-section[data-shift="true"] > .pc-part', nth: 0, cols: [5, 11], capped: true },
+  { id: 'intro-text', selector: '.pc-section[data-shift="true"] > p.pc-section-text', nth: 0, cols: [5, 11], capped: true },
   // раздел от поля: метка и тезис 1191, описание 731
-  { id: 'section-kicker', selector: '.pc-section:not([data-shift="true"]) > .pc-kicker', nth: 0, cols: [1, 8.94] },
+  { id: 'section-kicker', selector: '.pc-section:not([data-shift="true"]) > .pc-kicker', nth: 0, cols: [1, 9] },
   /*
    * Описания раздела ОТ ПОЛЯ на странице сейчас нет: `body` есть только у
    * вводного блока и у «Контекста», а оба стоят на трети. Правило 1/6 в CSS
@@ -82,12 +92,12 @@ const EXPECTED = [
    * шесть колонок). Здесь сверяется смещённый РАЗДЕЛ «Проблемы» — 1036, семь
    * колонок.
    */
-  { id: 'shifted-kicker', selector: '.pc-section[data-shift="true"]:not([data-intro="true"]) > .pc-kicker', nth: 0, cols: [5.07, 11.98], capped: true },
+  { id: 'shifted-kicker', selector: '.pc-section[data-shift="true"]:not([data-intro="true"]) > .pc-kicker', nth: 0, cols: [5, 12], capped: true },
   // нумерованный пункт: текст 731 от 671
-  { id: 'item-text', selector: '.pc-item-text', nth: 0, cols: [5.07, 9.94] },
+  { id: 'item-text', selector: '.pc-item-text', nth: 0, cols: [5, 10] },
   // пара кадров: 579 и 1189 с зазором 32
-  { id: 'pair-left', selector: '.pc-shots:not([data-wide="true"]) .pc-shot:first-child .pc-shot-frame', nth: 0, cols: [1, 4.86], ratio: 579 / 471 },
-  { id: 'pair-right', selector: '.pc-shots:not([data-wide="true"]) .pc-shot:last-child .pc-shot-frame', nth: 0, cols: [5.07, 13], ratio: 1189 / 664 },
+  { id: 'pair-left', selector: '.pc-shots:not([data-wide="true"]) .pc-shot:first-child .pc-shot-frame', nth: 0, cols: [1, 5], ratio: 579 / 471 },
+  { id: 'pair-right', selector: '.pc-shots:not([data-wide="true"]) .pc-shot:last-child .pc-shot-frame', nth: 0, cols: [5, 13], ratio: 1189 / 664 },
 ];
 
 /**
@@ -128,9 +138,20 @@ for (const width of WIDTHS) {
       const field = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--pa-field')) || 0;
       const pageWidth = document.querySelector('.pc-screen').getBoundingClientRect().width;
       const inner = pageWidth - field * 2;
-      const col = inner / 12;
+      /*
+       * 🔴 У сетки ЕСТЬ желоб, и колонка считается с его учётом. Пока здесь
+       * стояло `inner / 12`, проверка подтверждала неверную модель: величины
+       * владельца читались как «4.07 колонки» и списывались на недоводку до
+       * направляющих. С желобом они ложатся точно (2026-08-16).
+       */
+      const gutter = parseFloat(getComputedStyle(document.querySelector('.pc-flow')).columnGap) || 0;
+      const col = (inner - gutter * 11) / 12;
+      const step = col + gutter;
       const round = (v) => Math.round(v * 100) / 100;
-      const toCol = (x) => round((x - field) / col + 1);
+      const toCol = (x) => round((x - field) / step + 1);
+      /* Правый край: за последней колонкой желоба нет, поэтому граница считается
+         со сдвигом на него — иначе конец 12-й колонки читается как 11.8. */
+      const toColEnd = (x) => round((x - field + gutter) / step + 1);
 
       const geometry = expected.map((e) => {
         const node = document.querySelectorAll(e.selector)[e.nth];
@@ -139,7 +160,7 @@ for (const width of WIDTHS) {
         return {
           id: e.id,
           colStart: toCol(r.left),
-          colEnd: toCol(r.right),
+          colEnd: toColEnd(r.right),
           ratio: r.height ? round(r.width / r.height) : null,
           width: Math.round(r.width),
           height: Math.round(r.height),

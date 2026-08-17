@@ -161,12 +161,31 @@ type Move =
   | { kind: "sheet-in"; companyId: CompanyId }
   /** Синий экран спускается на ряд имён. */
   | { kind: "sheet-drop" }
+  /**
+   * Кейс → кейс: плоскость ПРИХОДИТ поверх старого кейса, под ней встаёт новый,
+   * и она уезжает. То есть тот же занавес, что на дороге компания → кейс, только
+   * проигранный целиком, в оба конца.
+   *
+   * Заведено 2026-08-17 по правке владельца: переходы в подвале «должны тоже
+   * как-то анимированно открывать кейсы, а то там просто статика; предлагаю
+   * использовать анимацию как сейчас при вызове меню с кейсами». Нового движения
+   * не появилось — `SheetCurtain` умеет оба направления с 14 августа, здесь они
+   * просто соединены в одну дорогу.
+   */
+  | { kind: "curtain-through"; word: string }
   /** Подмена без движения: экран либо уходит своей exit-анимацией, либо меняется сразу. */
   | { kind: "cut" }
 
 function moveFor(from: Screen, to: Screen): Move {
   if (from.kind === "company" && to.kind === "case" && from.companyId === to.companyId) {
     return { kind: "curtain-out", word: WORDMARK[from.companyId] }
+  }
+  /*
+   * 🔴 Условие «кейс другой» обязательно: без него повторное нажатие на тот же
+   * адрес крутило бы занавес на месте.
+   */
+  if (from.kind === "case" && to.kind === "case" && from.caseId !== to.caseId) {
+    return { kind: "curtain-through", word: WORDMARK[to.companyId] }
   }
   if (from.kind === "case" && to.kind === "company" && from.companyId === to.companyId) {
     return { kind: "sheet-in", companyId: to.companyId }
@@ -184,7 +203,15 @@ export function PortfolioRoute() {
    * переживало возврат и на следующем кейсе уводило маршрут обратно (дефект
    * 2026-08-15, поймал владелец). Одно состояние такой ловушки не создаёт.
    */
-  const [curtain, setCurtain] = React.useState<{ word: string } | null>(null)
+  const [curtain, setCurtain] = React.useState<{
+    /*
+     * Направление живёт в состоянии, а не выводится из маршрута: на дороге
+     * кейс → кейс одна и та же плоскость сначала приходит, потом уезжает, и
+     * маршрут в этот момент уже сменился.
+     */
+    direction: "in" | "out"
+    word: string
+  } | null>(null)
 
   /*
    * Лист компании, приезжающий поверх кейса на возврате. Он и есть «занавес»
@@ -273,8 +300,20 @@ export function PortfolioRoute() {
       if (move.kind === "curtain-out") {
         // Кейс встаёт сразу — плоскость уезжает уже с него.
         setArrivedRevealed(false)
-        setCurtain({ word: move.word })
+        setCurtain({ direction: "out", word: move.word })
         setScreenNow(next)
+        return
+      }
+
+      if (move.kind === "curtain-through") {
+        /*
+         * Экран пока НЕ меняем — как на дороге возврата: сначала плоскость
+         * закроет собой старый кейс, и только под ней встанет новый. Иначе
+         * подмена была бы видна сквозь ещё не закрывшийся занавес.
+         */
+        setArrivedRevealed(false)
+        setCurtain({ direction: "in", word: move.word })
+        pendingRef.current = next
         return
       }
 
@@ -307,8 +346,25 @@ export function PortfolioRoute() {
 
   const openHome = React.useCallback(() => go(""), [go])
 
-  /** Уходящая плоскость просто гаснет: кейс под ней уже стоит. */
-  const finishCurtain = React.useCallback(() => setCurtain(null), [])
+  /*
+   * Плоскость доехала.
+   *
+   * На УХОДЕ она просто снимается: кейс под ней уже стоит. На ПРИХОДЕ (дорога
+   * кейс → кейс) под ней в этот кадр встаёт новый кейс, и та же плоскость
+   * разворачивается на уход — одним обновлением, чтобы на стыке не мигнуло.
+   */
+  const finishCurtain = React.useCallback(() => {
+    const pending = pendingRef.current
+    if (pending && pending.kind === "case") {
+      pendingRef.current = null
+      setScreenNow(pending)
+      setCurtain((current) =>
+        current ? { direction: "out", word: current.word } : null,
+      )
+      return
+    }
+    setCurtain(null)
+  }, [setScreenNow])
 
   /*
    * Приехавший лист отдаёт экран маршруту.
@@ -328,7 +384,17 @@ export function PortfolioRoute() {
   }, [setScreenNow])
 
   const curtainNode = curtain ? (
-    <SheetCurtain onDone={finishCurtain} wordmark={curtain.word} />
+    <SheetCurtain
+      direction={curtain.direction}
+      /*
+       * Ключ по направлению — иначе framer-motion считает пришедшую и уходящую
+       * плоскость одним узлом и на развороте не перезапускает движение: занавес
+       * замирал бы закрытым.
+       */
+      key={curtain.direction}
+      onDone={finishCurtain}
+      wordmark={curtain.word}
+    />
   ) : null
 
   const arrivingSheet = arrivingCompany ? (
