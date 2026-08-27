@@ -68,22 +68,290 @@ export interface PortfolioCaseViewProps {
  * Внешний адрес остаётся резервом: кадра может не быть в манифесте, и тогда
  * лучше показать тяжёлый PNG, чем пустую рамку.
  */
-function CaseShot({ eager, image }: { eager?: boolean; image: CaseImage }) {
+function ShotPlate({ eager, image }: { eager?: boolean; image: CaseImage }) {
   const key = imageKeyFromSrc(image.src);
 
   return (
-    <figure className="pc-shot">
-      <div className="pc-shot-frame" data-surface={image.surface}>
-        <img
-          alt={image.alt}
-          decoding="async"
-          loading={eager ? "eager" : "lazy"}
-          sizes="(max-width: 899px) calc(100vw - 40px), min(1320px, calc(100vw - 120px))"
-          src={key ? imageFallback(key) : image.src}
-          srcSet={key ? imageSrcSet(key) : undefined}
-        />
+    <div className="pc-shot-frame" data-surface={image.surface}>
+      <img
+        alt={image.alt}
+        decoding="async"
+        loading={eager ? "eager" : "lazy"}
+        sizes="(max-width: 899px) calc(100vw - 40px), min(1320px, calc(100vw - 120px))"
+        src={key ? imageFallback(key) : image.src}
+        srcSet={key ? imageSrcSet(key) : undefined}
+      />
+    </div>
+  );
+}
+
+/**
+ * Показ кейса. Если у кадра есть `more`, ячейка становится слайдером.
+ *
+ * 🔴 Листание — ПРОКРУТКА со `scroll-snap`, а не перенос трека трансформом:
+ * свайп на телефоне, колесо на трекпаде и стрелки с клавиатуры достаются даром,
+ * а активный слайд считается по фактической прокрутке. Смахнул человек сам или
+ * нажал стрелку — подпись под показом одна и та же.
+ *
+ * 🔴 Стрелки обязательны, одних точек мало. Владелец 2026-08-26 о прошлой версии:
+ * «переключения нет для слайдера» — механика работала и тогда, но две точки 8 px
+ * светлым по светлой подложке управлением не читались.
+ */
+function CaseShot({ eager, image }: { eager?: boolean; image: CaseImage }) {
+  const trackRef = React.useRef<HTMLDivElement>(null);
+  const [active, setActive] = React.useState(0);
+  const slides = [image, ...(image.more ?? [])];
+
+  if (slides.length === 1) {
+    return (
+      <figure className="pc-shot">
+        <ShotPlate eager={eager} image={image} />
+        <figcaption>{image.caption}</figcaption>
+      </figure>
+    );
+  }
+
+  /* Активный слайд считается по прокрутке, а не по счётчику нажатий. */
+  const onScroll = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    setActive(Math.round(track.scrollLeft / track.clientWidth));
+  };
+
+  const goTo = (index: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollTo({ behavior: "smooth", left: index * track.clientWidth });
+  };
+
+  return (
+    <figure className="pc-shot" data-slider="true">
+      <div className="pc-shot-slider">
+        <div
+          aria-label={image.caption}
+          className="pc-shot-track"
+          data-testid="pc-shot-track"
+          onScroll={onScroll}
+          ref={trackRef}
+          role="group"
+          tabIndex={0}
+        >
+          {slides.map((slide, index) => (
+            <div className="pc-shot-slide" key={slide.src}>
+              <ShotPlate eager={eager && index === 0} image={slide} />
+            </div>
+          ))}
+        </div>
+        <button
+          aria-label="Предыдущий кадр"
+          className="pc-shot-arrow"
+          data-side="prev"
+          disabled={active === 0}
+          onClick={() => goTo(active - 1)}
+          type="button"
+        >
+          ←
+        </button>
+        <button
+          aria-label="Следующий кадр"
+          className="pc-shot-arrow"
+          data-side="next"
+          disabled={active === slides.length - 1}
+          onClick={() => goTo(active + 1)}
+          type="button"
+        >
+          →
+        </button>
+        <div className="pc-shot-dots">
+          {slides.map((slide, index) => (
+            <button
+              aria-current={index === active}
+              aria-label={slide.caption}
+              className="pc-shot-dot"
+              data-active={index === active}
+              key={slide.src}
+              onClick={() => goTo(index)}
+              type="button"
+            />
+          ))}
+        </div>
       </div>
-      <figcaption>{image.caption}</figcaption>
+      <figcaption>{slides[active].caption}</figcaption>
+    </figure>
+  );
+}
+
+/**
+ * Схема пути на месте кадра раздела.
+ *
+ * Владелец 2026-08-17: «отобрази флоу, который описывается выше — схематично,
+ * чтобы не грузить рисунками, а просто визуально показать путь». Поэтому здесь
+ * разметка, а не изображение: схема ничего не весит, читается на любой ширине и
+ * правится словом в данных.
+ *
+ * Стоит РОВНО на месте кадра раздела и с той же отбивкой 80 (`data-in-section`):
+ * в макете `120:1566` здесь плейсхолдер под показ, и схема занимает его место, а
+ * не добавляет странице новый блок.
+ *
+ * 🔴 Слайдер из кадра и схемы здесь был и снят 2026-08-26 в тот же день:
+ * «слишком большое поле мне не нравится, откати размер блока, оставь только
+ * схему». Кадр регистрации выше прочих (1768 × 1518), и обе плоскости слайдера
+ * приходилось поднимать до его высоты — схема оставалась в поле, которое ей
+ * велико. Возвращать слайдер имеет смысл только с кадром той же высоты, что
+ * остальные показы страницы.
+ */
+function CasePath({
+  flow,
+  more,
+  placeholder,
+}: {
+  flow: NonNullable<CaseDetailSection["flow"]>;
+  more?: CaseDetailSection["flowMore"];
+  placeholder?: boolean;
+}) {
+  const trackRef = React.useRef<HTMLDivElement>(null);
+  const [active, setActive] = React.useState(0);
+  const charts = [flow, ...(more ?? [])];
+
+  /*
+    Подложка отдельным узлом, а не фоном самой `figure`: подпись у показов
+    этой страницы стоит ПОД плоскостью, на белом поле. Когда фон был на
+    `figure`, подпись садилась внутрь серого — и блок перестал читаться как
+    показ.
+
+    Сторона шага задана атрибутом, а не порядком в DOM: счёт по типу узла в
+    этой вёрстке уже дважды давал разъехавшуюся раскладку (все элементы —
+    `div`).
+  */
+  const plate = (chart: NonNullable<CaseDetailSection["flow"]>) => (
+    <div className="pc-path-plate">
+      <div className="pc-path-entry">
+        {chart.entry.map((step, order) => (
+          <div
+            className="pc-path-step"
+            data-role="entry"
+            key={step}
+            /*
+              Крайние ступени входа помечены явно: у первой нет связи слева, у
+              последней от неё уходит развилка вниз. Порядок в DOM для этого не
+              считается — счёт по типу узла тут уже дважды подводил.
+            */
+            data-first={order === 0}
+            data-last={order === chart.entry.length - 1}
+          >
+            {step}
+          </div>
+        ))}
+      </div>
+      <div className="pc-path-tracks">
+        {chart.tracks.map((track) => (
+          <div className="pc-path-track" key={track.label}>
+            <div className="pc-path-step" data-role="task">
+              {track.label}
+            </div>
+            {track.steps.map((step) => (
+              <div className="pc-path-step" data-role="step" key={step}>
+                {step}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (charts.length === 1) {
+    return (
+      <figure
+        className="pc-path"
+        data-in-section="true"
+        data-placeholder={placeholder}
+        data-testid="pc-path"
+      >
+        {plate(flow)}
+        <figcaption className="pc-path-caption">{flow.caption}</figcaption>
+      </figure>
+    );
+  }
+
+  /*
+    🔴 Слайдер схем — та же механика, что у показа: прокрутка со `scroll-snap`,
+    активный слайд по фактической прокрутке, стрелки и точки. Заведён
+    2026-08-27 для «Дизайн-системы»: одна схема показывает цену правки ДО
+    системы, вторая — как тот же путь идёт ПОСЛЕ. Порознь они не читаются:
+    смысл в сравнении, а место в каркасе под схему ровно одно.
+  */
+  const onScroll = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    setActive(Math.round(track.scrollLeft / track.clientWidth));
+  };
+
+  const goTo = (index: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollTo({ behavior: "smooth", left: index * track.clientWidth });
+  };
+
+  return (
+    <figure
+      className="pc-path"
+      data-in-section="true"
+      data-placeholder={placeholder}
+      data-slider="true"
+      data-testid="pc-path"
+    >
+      <div className="pc-shot-slider">
+        <div
+          aria-label={flow.caption}
+          className="pc-shot-track"
+          data-testid="pc-path-track"
+          onScroll={onScroll}
+          ref={trackRef}
+          role="group"
+          tabIndex={0}
+        >
+          {charts.map((chart) => (
+            <div className="pc-shot-slide" key={chart.caption}>
+              {plate(chart)}
+            </div>
+          ))}
+        </div>
+        <button
+          aria-label="Предыдущая схема"
+          className="pc-shot-arrow"
+          data-side="prev"
+          disabled={active === 0}
+          onClick={() => goTo(active - 1)}
+          type="button"
+        >
+          ←
+        </button>
+        <button
+          aria-label="Следующая схема"
+          className="pc-shot-arrow"
+          data-side="next"
+          disabled={active === charts.length - 1}
+          onClick={() => goTo(active + 1)}
+          type="button"
+        >
+          →
+        </button>
+        <div className="pc-shot-dots">
+          {charts.map((chart, index) => (
+            <button
+              aria-current={index === active}
+              aria-label={chart.caption}
+              className="pc-shot-dot"
+              data-active={index === active}
+              key={chart.caption}
+              onClick={() => goTo(index)}
+              type="button"
+            />
+          ))}
+        </div>
+      </div>
+      <figcaption className="pc-path-caption">{charts[active].caption}</figcaption>
     </figure>
   );
 }
@@ -342,6 +610,11 @@ function frameSections(
       /* Карточки и схема — там, где они есть у шаблона; свои в приоритете. */
       cards: base?.cards ? mine?.cards ?? base.cards : undefined,
       flow: base?.flow ? mine?.flow ?? base.flow : undefined,
+      /*
+        Дополнительные схемы идут туда же, где схема, и только своими: у
+        шаблона второй схемы нет, подставлять «из образца» нечего.
+      */
+      flowMore: base?.flow ? mine?.flowMore : undefined,
       framePlaceholder: mine ? undefined : Boolean(base),
       frameFigures: role.figuresAfter,
       /*
@@ -532,7 +805,13 @@ export function PortfolioCaseView({
   }, [company.cases, caseStudy.id]);
 
   return (
-    <div className="pc-root" data-testid="pc-root">
+    /*
+      `data-case` — адрес для точечных правок ОДНОГО кейса. Владелец
+      2026-08-26, дважды и прямо: «я просил править только для одной
+      страницы». Без такого атрибута любая правка пары кадров или заголовка
+      уходила бы селектором во все восемь страниц, включая кейс-образец.
+    */
+    <div className="pc-root" data-testid="pc-root" data-case={caseStudy.id}>
       {/*
         Сетки-подложки здесь нет намеренно (снята 2026-08-13 по решению
         владельца). На `/archive` клетка — часть плаката и видна на чернилах
@@ -602,7 +881,16 @@ export function PortfolioCaseView({
             <CaseShot eager image={caseStudy.coverImage} />
           ) : (
             <figure className="pc-shot">
-              <div className="pc-shot-frame" data-empty="true" />
+              {/*
+                Пустая плоскость героя. `data-surface` на ней — не украшение: у
+                кейса без обложки страница иначе начинается серым полем во всю
+                ширину (правка владельца 2026-08-27 для «Дизайн-системы»).
+              */}
+              <div
+                className="pc-shot-frame"
+                data-empty="true"
+                data-surface={caseStudy.heroSurface}
+              />
             </figure>
           )}
         </div>
@@ -957,78 +1245,11 @@ export function PortfolioCaseView({
                       ))}
                     </div>
                   ) : section.flow ? (
-                    /*
-                      ─── СХЕМА ПУТИ ВМЕСТО КАДРА ────────────────────────────
-                      Владелец 2026-08-17: «отобрази флоу, который описывается
-                      выше — схематично, чтобы не грузить рисунками, а просто
-                      визуально показать путь». Поэтому здесь разметка, а не
-                      изображение: схема ничего не весит, читается на любой
-                      ширине и правится словом в данных.
-
-                      Стоит РОВНО на месте кадра раздела и с той же отбивкой 80
-                      (`data-in-section`): в макете `120:1566` здесь плейсхолдер
-                      под показ, и схема занимает его место, а не добавляет
-                      странице новый блок.
-
-                      Сторона шага задана атрибутом, а не порядком в DOM: счёт
-                      по типу узла в этой вёрстке уже дважды давал разъехавшуюся
-                      раскладку (все элементы — `div`).
-                    */
-                    <figure
-                      className="pc-path"
-                      data-in-section="true"
-                      data-placeholder={section.framePlaceholder}
-                      data-testid="pc-path"
-                    >
-                      {/*
-                        Подложка отдельным узлом, а не фоном самой `figure`:
-                        подпись у показов этой страницы стоит ПОД плоскостью, на
-                        белом поле. Когда фон был на `figure`, подпись садилась
-                        внутрь серого — и блок перестал читаться как показ.
-                      */}
-                      <div className="pc-path-plate">
-                        <div className="pc-path-entry">
-                          {section.flow.entry.map((step, order) => (
-                            <div
-                              className="pc-path-step"
-                              data-role="entry"
-                              key={step}
-                              /*
-                                Крайние ступени входа помечены явно: у первой нет
-                                связи слева, у последней от неё уходит развилка
-                                вниз. Порядок в DOM для этого не считается —
-                                счёт по типу узла тут уже дважды подводил.
-                              */
-                              data-first={order === 0}
-                              data-last={order === section.flow!.entry.length - 1}
-                            >
-                              {step}
-                            </div>
-                          ))}
-                        </div>
-                        <div className="pc-path-tracks">
-                          {section.flow.tracks.map((track) => (
-                            <div className="pc-path-track" key={track.label}>
-                              <div className="pc-path-step" data-role="task">
-                                {track.label}
-                              </div>
-                              {track.steps.map((step) => (
-                                <div
-                                  className="pc-path-step"
-                                  data-role="step"
-                                  key={step}
-                                >
-                                  {step}
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <figcaption className="pc-path-caption">
-                        {section.flow.caption}
-                      </figcaption>
-                    </figure>
+                    <CasePath
+                      flow={section.flow}
+                      more={section.flowMore}
+                      placeholder={section.framePlaceholder}
+                    />
                   ) : section.frameShots ??
                     SECTIONS_WITH_SHOT_SLOT.includes(section.kicker ?? "") ? (
                     /*
