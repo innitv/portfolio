@@ -498,7 +498,12 @@ html[data-portfolio-surface="case"] body {
  * между двумя экранами, которое видно человеку в движении.
  */
 .pc-head {
-  margin-block-start: var(--p-space-5);
+  /*
+   * Роль, а не примитив: на телефоне отбивка вдвое больше (см. «Моды ширины» в
+   * `portfolio-tokens.css`). Имя экрана ниже добирает ту же величину своим
+   * полем — поля схлопываются, и зазор остаётся один.
+   */
+  margin-block-start: var(--s-space-head);
 }
 
 .pc-title {
