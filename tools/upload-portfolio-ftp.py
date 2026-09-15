@@ -91,12 +91,15 @@ def main() -> None:
             ensure_dir(client, folder, known_dirs)
 
         local_size = path.stat().st_size
-        try:
-            if client.size(relative) == local_size:
-                skipped += 1
-                continue
-        except error_perm:
-            pass  # файла на сервере нет — заливаем
+
+        # 🔴 html, sitemap и robots льются всегда: их длина не меняется при правке.
+        if not relative.endswith((".html", ".xml", ".txt")):
+            try:
+                if client.size(relative) == local_size:
+                    skipped += 1
+                    continue
+            except error_perm:
+                pass  # файла на сервере нет — заливаем
 
         with open(path, "rb") as source:
             client.storbinary(f"STOR {relative}", source)
