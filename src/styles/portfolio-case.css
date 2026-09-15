@@ -2237,6 +2237,7 @@ ul.pc-section-text li + li {
     max-inline-size: 100%;
   }
 
+
   .pc-row {
     grid-template-columns: 1fr;
   }
@@ -2705,7 +2706,20 @@ ul.pc-section-text li + li {
 .pc-root[data-layout="longread"] .pc-lede {
   font-size: var(--s-type-lead);
   line-height: 1.4;
-  max-inline-size: calc(var(--pa-inner) * 0.321);
+}
+
+/*
+ * 🔴 МЕРА ЛИДА — ДОЛЯ ПОЛЯ, И ТОЛЬКО НА ШИРОКОМ ЭКРАНЕ.
+ *
+ * 0.321 внутренней ширины — колонка лида из макета. На 375 та же доля давала
+ * 107 px: лид шёл лесенкой по два слова в строке, семнадцатью строками вместо
+ * пяти (владелец 15.09.2026: «текст описание в лонгридах поехал»). Ниже 900
+ * правило не применяется, и лид занимает поле целиком — как заголовок над ним.
+ */
+@media (min-width: 900px) {
+  .pc-root[data-layout="longread"] .pc-lede {
+    max-inline-size: calc(var(--pa-inner) * 0.321);
+  }
 }
 
 /*

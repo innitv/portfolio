@@ -492,9 +492,19 @@ test("список работ держит высоту на обеих вкла
 
   const measure = async () =>
     page.evaluate(() => {
-      const cases = document.querySelector(".pa-cases")!.getBoundingClientRect();
-      const facts = document.querySelector(".pa-facts")!.getBoundingClientRect();
-      return { cases: Math.round(cases.height), facts: Math.round(facts.top) };
+      const casesNode = document.querySelector(".pa-cases")!;
+      const factsNode = document.querySelector(".pa-facts")!;
+      const cases = casesNode.getBoundingClientRect();
+      const facts = factsNode.getBoundingClientRect();
+
+      return {
+        cases: Math.round(cases.height),
+        casesTop: Math.round(cases.top),
+        facts: Math.round(facts.top),
+        /* Показаны ли величины — отдельно от того, занимают ли они место. */
+        factsShown: getComputedStyle(factsNode).visibility !== "hidden",
+        factsSpace: Math.round(facts.height),
+      };
     });
 
   for (const width of [1440, 390]) {
@@ -512,6 +522,30 @@ test("список работ держит высоту на обеих вкла
     expect(ai.facts, `Ширина ${width}: величины компании переехали`).toBe(
       works.facts,
     );
+
+    /*
+      Величины на телефоне сняты, но место держат.
+
+      🔴 Второе — не придирка к способу. Лист раскладывает шапку, список работ и
+      величины через `space-between`: выпади величины из потока, блоков станет
+      два, и список уедет к нижнему краю — на 390 это 240 px вниз. Поэтому
+      сторожится и показ (`visibility`), и сохранённое место (высота блока).
+    */
+    if (width < 640) {
+      expect(
+        works.factsShown,
+        `Ширина ${width}: величины остались на телефоне`,
+      ).toBe(false);
+      expect(
+        works.factsSpace,
+        `Ширина ${width}: величины выпали из потока — список уедет вниз`,
+      ).toBeGreaterThan(0);
+    } else {
+      expect(
+        works.factsShown,
+        `Ширина ${width}: величины пропали с широкого экрана`,
+      ).toBe(true);
+    }
   }
 });
 
