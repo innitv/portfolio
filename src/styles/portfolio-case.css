@@ -661,8 +661,7 @@ html[data-portfolio-surface="case"] body {
 /* Метка и тезис: 8 колонок от поля («Контекст» 1191 в макете). */
 .pc-section > .pc-kicker,
 .pc-section > .pc-part,
-.pc-section > .pc-lead,
-.pc-section > .pc-label {
+.pc-section > .pc-lead {
   grid-column: 1 / 9;
 }
 
@@ -694,8 +693,7 @@ html[data-portfolio-surface="case"] body {
 /* Смещённый блок: метка, тезис и описание начинаются с 5-й колонки. */
 .pc-section[data-shift="true"] > .pc-kicker,
 .pc-section[data-shift="true"] > .pc-part,
-.pc-section[data-shift="true"] > .pc-lead,
-.pc-section[data-shift="true"] > .pc-label {
+.pc-section[data-shift="true"] > .pc-lead {
   grid-column: 5 / 12;
   /* Смещённый тезис в макете у́же: 1036 против 1191 у блока от поля. */
   max-inline-size: var(--pc-thesis-shift-max);
@@ -860,11 +858,13 @@ html[data-portfolio-surface="case"] body {
 
 /*
  * ─── МЕТКА НАД ЗАГОЛОВКОМ РАЗДЕЛА ──────────────────────────────────────────
- * Та же роль, что у `.pc-label` в колонке фактов, и намеренно тот же вид:
- * моноширинная мелочь — это язык служебных подписей на всей странице, и вторая
- * их разновидность была бы шумом. Отдельный класс нужен только ради отбивки:
- * метка в потоке открывает раздел и требует воздуха сверху, а в колонке фактов
- * стоит вплотную к значению.
+ * Моноширинная мелочь — язык служебных подписей на всей странице: та же манера
+ * у строки шапки, подписи кадра и номера пункта, и вторая их разновидность
+ * была бы шумом.
+ *
+ * Свой класс у метки ради отбивки: она открывает раздел и требует воздуха
+ * сверху. Раньше тот же вид носил `.pc-label` в колонке фактов — колонка снята
+ * с макета 14.08.2026, класс вычищен 15.09.2026.
  */
 .pc-kicker {
   /* Отбивку сверху даёт сам раздел — метка стоит его первой строкой. */
@@ -1958,12 +1958,10 @@ ul.pc-section-text li + li {
   .pc-section > .pc-kicker,
   .pc-section > .pc-part,
   .pc-section > .pc-lead,
-  .pc-section > .pc-label,
   .pc-section > p.pc-section-text,
   .pc-section[data-shift="true"] > .pc-kicker,
   .pc-section[data-shift="true"] > .pc-part,
   .pc-section[data-shift="true"] > .pc-lead,
-  .pc-section[data-shift="true"] > .pc-label,
   .pc-section[data-shift="true"] > p.pc-section-text,
   /*
    * Тезис раздела с карточками перечислен ОТДЕЛЬНО, хотя `.pc-section > .pc-part`
@@ -2584,7 +2582,6 @@ ul.pc-section-text li + li {
 .pc-root[data-layout="longread"] .pc-section > .pc-kicker,
 .pc-root[data-layout="longread"] .pc-section > .pc-part,
 .pc-root[data-layout="longread"] .pc-section > .pc-lead,
-.pc-root[data-layout="longread"] .pc-section > .pc-label,
 .pc-root[data-layout="longread"] .pc-section > p.pc-section-text,
 .pc-root[data-layout="longread"] .pc-section > ul.pc-section-text,
 .pc-root[data-layout="longread"] .pc-section > .pc-items,
@@ -2633,7 +2630,6 @@ ul.pc-section-text li + li {
   .pc-root[data-layout="longread"] .pc-section > .pc-kicker,
   .pc-root[data-layout="longread"] .pc-section > .pc-part,
   .pc-root[data-layout="longread"] .pc-section > .pc-lead,
-  .pc-root[data-layout="longread"] .pc-section > .pc-label,
   .pc-root[data-layout="longread"] .pc-section > p.pc-section-text,
   .pc-root[data-layout="longread"] .pc-section > ul.pc-section-text,
   .pc-root[data-layout="longread"] .pc-section > .pc-items,
