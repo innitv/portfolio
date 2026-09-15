@@ -762,6 +762,7 @@ test("каждый адрес отдаёт свои мета и текст бе�
     expect(html, `${page.file}: нет описания`).toMatch(/<meta name="description" content="[^"]{40,}"/);
     expect(html, `${page.file}: нет канонического адреса`).toContain('rel="canonical"');
     expect(html, `${page.file}: нет карточки ссылки`).toContain('property="og:image"');
+    expect(html, `${page.file}: нет иконки сайта`).toContain('rel="icon"');
     expect(html, `${page.file}: в исходнике нет текста страницы`).toContain(page.text);
   }
 
