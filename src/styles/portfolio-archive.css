@@ -924,7 +924,9 @@ html[data-portfolio-surface="archive"] body {
   font-size: var(--pa-meta-size);
   line-height: var(--pa-top-leading);
   letter-spacing: 0.06em;
-  color: var(--pa-mute);
+  /* Вкладка стоит на кобальте: приглушённый цвет берётся у роли для брендового
+     фона — при общей роли неактивная вкладка читалась 2.82:1 при норме 4.5. */
+  color: var(--pa-mute-on-accent);
   transition: color var(--pa-dur-hover) var(--pa-ease-out-sheet);
 }
 
@@ -972,7 +974,9 @@ html[data-portfolio-surface="archive"] body {
   font-family: var(--pa-mono);
   font-size: var(--pa-meta-size);
   letter-spacing: 0.06em;
-  color: var(--pa-mute);
+  /* Строка стоит на кобальте — как вкладки: приглушённый цвет берётся у роли
+     для брендового фона, иначе она читается 2.82:1 при норме 4.5. */
+  color: var(--pa-mute-on-accent);
 }
 
 /* Вкладки и список работ идут одним блоком: раскладка листа распределяет

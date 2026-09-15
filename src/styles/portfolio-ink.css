@@ -67,6 +67,7 @@
   --pa-line: var(--s-border-on-ink);
   /* Приглушённый белый: служебные строки на чернилах. */
   --pa-mute: var(--s-text-muted);
+  --pa-mute-on-accent: var(--s-text-muted-on-accent);
   /*
    * Полупрозрачный белый: приглушение в цвете, а не в `opacity`.
    *

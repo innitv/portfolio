@@ -369,7 +369,7 @@
   --pc-aside-gap: 40px;
   /* Рельс лонгрида: отступ липкого блока, ритм строк и кегли указателей. */
 
-  --pc-shot-dot: var(--s-border-default);
+  --pc-shot-dot: var(--s-border-control);
   --pc-shot-dot-active: var(--pa-ink);
 }
 
