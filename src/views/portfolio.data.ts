@@ -2639,21 +2639,6 @@ export function imageFallback(key: OptimizedImageKey): string {
   return `/assets/optimized/${key}-${optimizedImages[key].widths[0]}.webp`
 }
 
-/**
- * Предельная ширина показа кадра в CSS-пикселях.
- *
- * `STYLE_GUIDE.md` → Анти-паттерны: «ни один кадр не растянут выше
- * natural/1.5». Ассеты портфолио — от 480 до 2880 px, и «кадр во всю ширину
- * 1152» физически возможен только у четырёх из двадцати двух. Поэтому ширина
- * не назначается вёрсткой, а ВЫЧИСЛЯЕТСЯ: узкий кадр показывается уже и
- * остаётся резким, вместо того чтобы мылить на retina.
- */
-export function maxRenderWidth(key: OptimizedImageKey, limit = 1152): number {
-  const widths = optimizedImages[key].widths
-  const natural = widths[widths.length - 1]
-  return Math.min(limit, Math.round(natural / 1.5))
-}
-
 export interface CaseMetric {
   /** Подпись: метка до двоеточия, если она есть, иначе фраза целиком. */
   label: string
@@ -3007,25 +2992,3 @@ export function caseById(company: Company, id: string): CaseStudy | undefined {
   return company.cases.find((item) => item.id === id)
 }
 
-/**
- * Разделы кейса для степпера и тела статьи.
- *
- * У кейсов без `detailSections` состав собирается из базовых полей — ровно
- * так же, как на текущем сайте (`PortfolioView.tsx` → `CasePage`), чтобы
- * степпер «01…08» существовал у каждого кейса, а не у большинства.
- */
-export function caseSections(caseStudy: CaseStudy): CaseDetailSection[] {
-  return (
-    caseStudy.detailSections ?? [
-      { title: "Контекст", body: [caseStudy.context] },
-      { title: "Проблема", quote: caseStudy.problem },
-      { title: "Решение", items: caseStudy.solution },
-      { title: "Результат", items: caseStudy.result },
-    ]
-  )
-}
-
-/** Все кадры раздела в одном списке — обложка, одиночный кадр, серия. */
-export function sectionImages(section: CaseDetailSection): CaseImage[] {
-  return [...(section.image ? [section.image] : []), ...(section.images ?? [])]
-}

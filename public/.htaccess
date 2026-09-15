@@ -3,13 +3,36 @@ RewriteEngine On
 RewriteBase /
 
 <IfModule mod_headers.c>
-  <FilesMatch "\.(?:css|js|png|jpg|jpeg|webp|avif|gif|svg|mp4)$">
+  # Хешированные и версионированные файлы: год и immutable.
+  #
+  # 🔴 woff2 добавлен 15.09.2026 по замеру: шрифты приходили БЕЗ Cache-Control
+  # вовсе, только с ETag, и на каждом повторном визите браузер ревалидировал
+  # четыре-пять файлов по ~0.85 с на этом хостинге. Имена у них хешированные,
+  # содержимое по определению неизменно.
+  <FilesMatch "\.(?:css|js|png|jpg|jpeg|webp|avif|gif|svg|mp4|woff2)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Оболочка приложения кешируется только с перепроверкой.
+  #
+  # Без заголовка браузер применяет эвристическую свежесть от Last-Modified, и
+  # вернувшийся посетитель получает старый index.html со ссылками на хеши,
+  # которых после выгрузки уже нет. Отсюда класс жалоб «помогло Ctrl+F5».
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>
 
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
+
+# 🔴 Ассеты НЕ уходят в оболочку приложения.
+#
+# Без этого правила отсутствующий файл отвечал 200 и телом index.html: замер
+# 15.09.2026 по боевому адресу кадра дал 579 байт HTML вместо картинки. Из-за
+# этого не работал внешний резерв кадра («лучше показать тяжёлый PNG, чем
+# пустую рамку») и ни одна проверка не видела пропажу — статус-то успешный.
+RewriteRule ^assets/ - [R=404,L]
 
 RewriteRule . /index.html [L]

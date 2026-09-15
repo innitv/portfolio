@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, m } from "framer-motion"
 
 import { DURATION, EASE, TIMING } from "@/components/portfolio/motion"
 
@@ -373,7 +373,7 @@ export function ArchiveSheet({
             Скрывать текст на время проезда больше не нужно клипом: он и так
             приходит позже плоскости, прозрачностью (`ITEMS_DELAY`).
           */}
-          <motion.div
+          <m.div
             animate={{ clipPath: OPEN }}
             aria-hidden="true"
             className="pa-sheet-plane"
@@ -400,7 +400,7 @@ export function ArchiveSheet({
             CONTENT_EXIT. Общий fade по времени как раз и оставлял величины
             висеть внизу на голых чернилах.
           */}
-          <motion.div className="pa-sheet-inner" {...CONTENT_EXIT}>
+          <m.div className="pa-sheet-inner" {...CONTENT_EXIT}>
           <div className="pa-sheet-head">
             {/*
               Кнопка возврата — тоже содержимое, и приходит вместе с именем, а
@@ -417,7 +417,7 @@ export function ArchiveSheet({
               «портфолио · 2026» на главном экране — прыжок по вертикали здесь
               читался бы как расхождение шапок.
             */}
-            <motion.button
+            <m.button
               className="pa-back"
               data-testid="pa-back"
               onClick={onClose}
@@ -426,7 +426,7 @@ export function ArchiveSheet({
               {...item(0, false)}
             >
               ← все работы
-            </motion.button>
+            </m.button>
             {/*
               Имя проявляется прозрачностью, но БЕЗ сдвига — и с заранее
               зафиксированным сглаживанием (см. `.pa-huge` в CSS).
@@ -435,12 +435,12 @@ export function ArchiveSheet({
               и они дрожали. Прозрачность оставлена: плавность нужна, а разницы
               в толщине больше нет — сглаживание не переключается.
             */}
-            <motion.div className="pa-huge" {...item(0, false)}>
+            <m.div className="pa-huge" {...item(0, false)}>
               {company.wordmark}
-            </motion.div>
-            <motion.div className="pa-sub" {...item(1)}>
+            </m.div>
+            <m.div className="pa-sub" {...item(1)}>
               {company.meta}
-            </motion.div>
+            </m.div>
           </div>
 
           {/*
@@ -460,7 +460,7 @@ export function ArchiveSheet({
           */}
           <div className="pa-cases-block">
           {company.caseTabs ? (
-            <motion.div
+            <m.div
               aria-label="Разделы работ"
               className="pa-tabs"
               data-testid="pa-tabs"
@@ -481,7 +481,7 @@ export function ArchiveSheet({
                   {entry.label}
                 </button>
               ))}
-            </motion.div>
+            </m.div>
           ) : null}
 
           <div
@@ -505,7 +505,7 @@ export function ArchiveSheet({
                   key={layer.id}
                 >
                   {layer.cases.map((study, index) => (
-                    <motion.button
+                    <m.button
                       className="pa-case"
                       data-testid={`pa-case-${study.caseId}`}
                       /*
@@ -522,21 +522,21 @@ export function ArchiveSheet({
                       <span className="pa-case-index">{ROMAN[index] ?? study.index}</span>
                       <span className="pa-case-title">{study.title}</span>
                       <span className="pa-case-impact">{study.impact}</span>
-                    </motion.button>
+                    </m.button>
                   ))}
                   {/*
                     Пустая вкладка говорит словами, а не пустотой: без строки
                     экран выглядел бы сломанным переключателем.
                   */}
                   {layer.cases.length === 0 ? (
-                    <motion.p
+                    <m.p
                       className="pa-cases-empty"
                       data-testid={active ? "pa-cases-empty" : undefined}
                       key={`${tab}-empty`}
                       {...(active ? caseItem(0) : {})}
                     >
                       Работы с AI появятся здесь
-                    </motion.p>
+                    </m.p>
                   ) : null}
                 </div>
               )
@@ -546,16 +546,16 @@ export function ArchiveSheet({
 
           <div className="pa-facts">
             {company.facts.map((fact, index) => (
-              <motion.div
+              <m.div
                 key={`${fact.value}-${fact.caption}`}
                 {...item(2 + company.cases.length + index)}
               >
                 <div className="pa-fact-value">{fact.value}</div>
                 <div className="pa-fact-caption">{fact.caption}</div>
-              </motion.div>
+              </m.div>
             ))}
           </div>
-          </motion.div>
+          </m.div>
         </section>
       ) : null}
     </AnimatePresence>

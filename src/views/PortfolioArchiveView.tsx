@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { motion } from "framer-motion"
+import { m } from "framer-motion"
 
 import { ArchiveSheet } from "@/components/portfolio/archive/archive-sheet"
 import { ArchiveStripe } from "@/components/portfolio/archive/archive-stripe"
@@ -225,7 +225,7 @@ export function PortfolioArchiveView({
     <div className="pa-root" data-testid="pa-root">
 
       <div className="pa-screen">
-        <motion.div className="pa-top" data-testid="pa-top" {...reveal(REVEAL_ORDER.top)}>
+        <m.div className="pa-top" data-testid="pa-top" {...reveal(REVEAL_ORDER.top)}>
           {/*
             Слева подпись, а не кнопка: этот экран и есть главная сайта, вести
             с неё на саму себя не за чем. На странице кейса та же строка —
@@ -256,12 +256,12 @@ export function PortfolioArchiveView({
               </a>
             ))}
           </span>
-        </motion.div>
+        </m.div>
 
         <div className="pa-title">
-          <motion.div className="pa-word" data-testid="pa-word" {...reveal(REVEAL_ORDER.word)}>
+          <m.div className="pa-word" data-testid="pa-word" {...reveal(REVEAL_ORDER.word)}>
             Product
-          </motion.div>
+          </m.div>
 
           <ArchiveStripe
             /*
@@ -269,18 +269,18 @@ export function PortfolioArchiveView({
               вместе с болидом, и запускать нечего.
             */
             cursive={
-              <motion.div
+              <m.div
                 className="pa-cursive"
                 data-testid="pa-cursive"
                 {...reveal(REVEAL_ORDER.cursive)}
               >
                 Archive
-              </motion.div>
+              </m.div>
             }
           />
         </div>
 
-        <motion.div className="pa-works" data-testid="pa-works" {...reveal(REVEAL_ORDER.works)}>
+        <m.div className="pa-works" data-testid="pa-works" {...reveal(REVEAL_ORDER.works)}>
           <div className="pa-works-label">работы</div>
           <div className="pa-row">
             {archiveCompanies.map((item, index) => (
@@ -302,11 +302,11 @@ export function PortfolioArchiveView({
               </React.Fragment>
             ))}
           </div>
-        </motion.div>
+        </m.div>
 
-        <motion.div className="pa-spec" {...reveal(REVEAL_ORDER.spec)}>
+        <m.div className="pa-spec" {...reveal(REVEAL_ORDER.spec)}>
           {COLOR_SPEC}
-        </motion.div>
+        </m.div>
       </div>
 
       <ArchiveSheet

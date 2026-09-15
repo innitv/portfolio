@@ -209,7 +209,7 @@ html[data-portfolio-surface="archive"] body {
  */
 .pa-screen {
   position: relative;
-  z-index: 1;
+  z-index: var(--s-layer-raised);
   display: flex;
   flex-direction: column;
   min-block-size: 100dvh;
@@ -224,33 +224,6 @@ html[data-portfolio-surface="archive"] body {
   line-height: var(--pa-top-leading);
   letter-spacing: 0.06em;
   color: var(--pa-mute);
-}
-
-/*
- * Переход на главную. Тем же начертанием, что соседняя строка: в макете это
- * служебная строка, а не кнопка.
- *
- * Тач-цель добирается псевдоэлементом, а не отступами: сама строка стоит по
- * сетке макета, и padding сдвинул бы её с места. По тексту цель была 13×18 —
- * вдвое меньше минимума WCAG 2.5.8 (24×24) и втрое меньше комфортных 44.
- */
-.pa-home {
-  position: relative;
-  background: none;
-  border: 0;
-  padding: 0;
-  color: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-  cursor: pointer;
-}
-
-.pa-home::after {
-  content: "";
-  position: absolute;
-  inset-inline: calc(var(--p-space-2) * -1);
-  inset-block: calc(var(--p-space-4) * -1);
-  min-block-size: var(--s-target-touch);
 }
 
 /*
@@ -294,24 +267,23 @@ html[data-portfolio-surface="archive"] body {
   color: var(--pa-ink-invert);
 }
 
-/* Тач-цель добирается псевдоэлементом — по тем же причинам, что у `.pa-home`. */
+/*
+ * ─── ТАЧ-ЦЕЛЬ ДОБИРАЕТСЯ ПСЕВДОЭЛЕМЕНТОМ, А НЕ ОТСТУПАМИ ───────────────────
+ *
+ * Сама строка стоит по сетке макета, и padding сдвинул бы её с места. По тексту
+ * цель была 13×18 — вдвое меньше минимума WCAG 2.5.8 (24×24) и втрое меньше
+ * комфортных 44. Вылет псевдоэлемента растит зону нажатия, не трогая вид.
+ *
+ * Это образец приёма для всего сайта (на него ссылаются CLAUDE.md и
+ * design/COMPONENTS.md). До 15.09.2026 образцом была кнопка «на главную»
+ * (`.pa-home`) — её сняли с экрана, стили остались мёртвыми и удалены.
+ */
 .pa-contact::after {
   content: "";
   position: absolute;
   inset-inline: calc(var(--p-space-2) * -1);
   inset-block: calc(var(--p-space-4) * -1);
   min-block-size: var(--s-target-touch);
-}
-
-.pa-home:focus-visible {
-  outline: 2px solid var(--pa-paper);
-  outline-offset: 6px;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .pa-home:hover {
-    color: var(--pa-paper);
-  }
 }
 
 .pa-title {
@@ -332,7 +304,7 @@ html[data-portfolio-surface="archive"] body {
  */
 .pa-stripe {
   position: relative;
-  z-index: 1;
+  z-index: var(--s-layer-raised);
   /*
    * 🔴 Свой слой смешивания. Слово «Archive» вырезано в ленте
    * (`mix-blend-mode: destination-out`), и без изоляции вырез прошёл бы
@@ -594,7 +566,7 @@ html[data-portfolio-surface="archive"] body {
 .pa-sheet {
   position: fixed;
   inset: 0;
-  z-index: 8;
+  z-index: var(--s-layer-sheet);
   color: var(--pa-paper);
   font-family: var(--pa-sans);
 }
@@ -635,7 +607,7 @@ html[data-portfolio-surface="archive"] body {
  */
 .pa-back {
   position: relative;
-  z-index: 2;
+  z-index: var(--s-layer-sticky);
   /*
    * Блочная и по содержимому. Кнопка по умолчанию `inline-block`, а лежит она в
    * блочном контейнере — и выравнивалась по базовой линии строки, отчего её
@@ -776,8 +748,8 @@ html[data-portfolio-surface="archive"] body {
 /* Инверсия строки: белая плашка, синие буквы. */
 .pa-case {
   transition:
-    background-color 0.3s var(--pa-ease-out),
-    color 0.3s var(--pa-ease-out);
+    background-color var(--pa-dur-tick) var(--pa-ease-out),
+    color var(--pa-dur-tick) var(--pa-ease-out);
 }
 
 .pa-case-index,

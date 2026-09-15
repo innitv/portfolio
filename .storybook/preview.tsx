@@ -1,4 +1,6 @@
 import type { Preview } from "@storybook/react-vite";
+import React from "react";
+import { LazyMotion, domAnimation } from "framer-motion";
 
 // Единственный источник визуального слоя: Tailwind + сгенерированные токены
 // (design/tokens/shadcn -> yarn tokens:build -> src/styles/shadcn/tokens.generated.css).
@@ -24,6 +26,20 @@ const preview: Preview = {
   },
   // autodocs намеренно не включён: он требует отдельного пакета
   // @storybook/addon-docs, а задача этапа — витрина состояний, не doc-сайт.
+
+  /*
+   * Набор возможностей движения — тот же, что в `src/main.tsx`: `domAnimation`
+   * и `strict`. Без него компоненты с `m.*` рендерятся без контекста и падают,
+   * а с другим набором витрина проверяла бы не ту сборку, что едет на сайт.
+   */
+  decorators: [
+    (Story) =>
+      React.createElement(
+        LazyMotion,
+        { features: domAnimation, strict: true },
+        React.createElement(Story),
+      ),
+  ],
 };
 
 export default preview;

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 import { DURATION as MOTION, EASE } from "@/components/portfolio/motion";
 
@@ -127,7 +127,7 @@ export function SheetCurtain({ direction = "out", wordmark, onDone }: SheetCurta
   const coming = direction === "in";
 
   return (
-    <motion.div
+    <m.div
       animate={{ clipPath: coming ? OPEN : CLOSED }}
       aria-hidden="true"
       className="pa-curtain"
@@ -147,6 +147,6 @@ export function SheetCurtain({ direction = "out", wordmark, onDone }: SheetCurta
         появилось бы дважды: сначала на плоскости, потом ещё раз в лесенке.
       */}
       {coming ? null : <div className="pa-curtain-word">{wordmark}</div>}
-    </motion.div>
+    </m.div>
   );
 }

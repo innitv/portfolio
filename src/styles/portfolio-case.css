@@ -235,39 +235,6 @@
   /* Линия → строка пункта. */
   --pc-gap-rule: clamp(10px, 1.04vw, 20px);
   /*
-   * ─── СДВИГ ЧЕРЕДУЮЩЕГОСЯ БЛОКА ───────────────────────────────────────────
-   * Треть ширины плюс поправка — величина из макета 88:248: там текстовый блок
-   * стоит на `calc(33.33% + 31)`, то есть на 671 из 1920. Процент считается от
-   * ширины потока, поэтому доля переносится на любую ширину сама.
-   */
-  --pc-shift: calc(33.33% + 30px);
-  /*
-   * ─── КОЛОНКА НОМЕРА В НУМЕРОВАННОМ ПУНКТЕ ────────────────────────────────
-   * Ровно та же вертикаль, что у сдвинутого вводного блока: в макете текст
-   * пункта начинается на 611 из 1800, то есть на трети ширины блока — там же,
-   * где стоит «О проекте». Одна величина вместо двух держит страницу на двух
-   * вертикалях, а не на трёх.
-   *
-   * В макете колонка номера у первого пункта 168, у остальных 107. Это ручная
-   * правка эскиза, а не система: в коде она одна на все пункты.
-   */
-  --pc-num-col: var(--pc-shift);
-  /*
-   * ─── ШИРИНА ТЕКСТА ПУНКТА ────────────────────────────────────────────────
-   * 🔴 Задана ДОЛЕЙ блока, а не мерой в знаках — правка по замечанию владельца
-   * «текст расположен не как у меня, проверь сетку» (2026-08-14).
-   *
-   * В макете текст пункта занимает 731 из 1800, то есть 41 % внутренней ширины.
-   * Мера `52ch` при Manrope 20 давала 648 из 1320 — 49 %, на восьмую часть
-   * шире, и строка выходила длиннее макетной. Замер это показывает долей, на
-   * глаз — только ощущением «не как у меня».
-   *
-   * Плата: 43-45 знаков в строке вместо 50-70. Норма нарушена сознательно —
-   * совпадение с сеткой владельца здесь важнее рекомендованной меры, а кегль
-   * при этом не менялся.
-   */
-  --pc-item-col: 41%;
-  /*
    * ─── ПОТОЛКИ ШИРИН ИЗ МАКЕТА ─────────────────────────────────────────────
    * 🔴 Правка по замечанию владельца «заголовки текстовых блоков ты снова
    * растянул, у них фиксированная ширина на больших экранах» (2026-08-14).
@@ -307,7 +274,7 @@
    * Поле не чисто белое: #fdfdfc гасит резь от 100 % белого на большой площади,
    * оставаясь белым на вид. Текст — те же чернила, что фон `/archive`.
    */
-  --pc-bg: #fdfdfc;
+  --pc-bg: var(--s-surface-page-quiet);
   --pc-fg: var(--pa-ink);
 
   /*
@@ -348,13 +315,13 @@
   /* Служебные строки: 5.4:1 к полю — выше порога 4.5 с запасом. */
   --pc-muted: color-mix(in srgb, var(--pa-ink) 60%, var(--pc-bg));
   /* Линии таблиц и рамок. */
-  --pc-rule: rgba(11, 11, 11, 0.22);
+  --pc-rule: var(--s-border-default);
   /*
    * Линия над пунктом. Слабее разделителей намеренно: рамок таких на странице
    * тридцать, и линиями таблиц они превратили бы раздел в бланк. Значение из
    * макета 88:248 (там #E3E3E3).
    */
-  --pc-rule-soft: rgba(11, 11, 11, 0.1);
+  --pc-rule-soft: var(--s-border-soft);
   /*
    * Подложка показа: плоскость, а не линия, — отсюда почти прозрачные чернила.
    *
@@ -365,7 +332,7 @@
    * разница десять единиц: край читается везде, но плоскость остаётся
    * подложкой, а не серым блоком.
    */
-  --pc-shot-bg: rgba(11, 11, 11, 0.04);
+  --pc-shot-bg: var(--s-surface-plate);
   /*
    * Подложка показа с акцентом — синий градиент из узла `95:1064`.
    * Единственное место страницы, где плоскость кадра не нейтральна: владелец
@@ -402,7 +369,7 @@
   --pc-aside-gap: 40px;
   /* Рельс лонгрида: отступ липкого блока, ритм строк и кегли указателей. */
 
-  --pc-shot-dot: rgba(11, 11, 11, 0.22);
+  --pc-shot-dot: var(--s-border-default);
   --pc-shot-dot-active: var(--pa-ink);
 }
 
@@ -436,7 +403,7 @@ html[data-portfolio-surface="case"] body {
  */
 .pc-screen {
   position: relative;
-  z-index: 1;
+  z-index: var(--s-layer-raised);
   padding: var(--pa-field);
 }
 
@@ -534,14 +501,6 @@ html[data-portfolio-surface="case"] body {
   margin-block-start: var(--p-space-5);
 }
 
-.pc-index {
-  font-family: var(--pa-mono);
-  font-size: var(--pc-meta-size);
-  line-height: 1.375;
-  letter-spacing: var(--pa-meta-tracking);
-  color: var(--pc-muted);
-}
-
 .pc-title {
   margin-block-start: var(--p-space-5);
   /*
@@ -575,24 +534,6 @@ html[data-portfolio-surface="case"] body {
   font-size: var(--pc-lede-size);
   line-height: 1.4;
   color: var(--pc-fg-soft);
-}
-
-/*
- * Итог кейса — единственное место на странице, где кобальт работает текстом.
- * Дальше он приходит плоскостью, и два разных применения одного цвета рядом
- * читались бы как разные цвета.
- */
-.pc-impact-line {
-  margin-block-start: 20px;
-  display: inline-block;
-  padding: var(--p-space-2) var(--p-space-3);
-  background-color: var(--pa-cobalt);
-  font-family: var(--pa-mono);
-  font-size: var(--pa-meta-size);
-  letter-spacing: var(--pa-meta-tracking);
-  /* Белый ЯВНО: на светлой странице цвет текста наследуется чернильный, и на
-     кобальте он давал 2.47:1 — поймано замером при переводе на светлое поле. */
-  color: var(--pa-paper);
 }
 
 /*
@@ -786,12 +727,8 @@ html[data-portfolio-surface="case"] body {
   grid-column: 1 / 13;
 }
 
-/* Кадры, таблица, плоскость итога и переход — во все 12 колонок. */
+/* Кадры и схема — во все 12 колонок. */
 .pc-shots,
-.pc-rows,
-.pc-impact,
-.pc-next,
-.pc-facts,
 /* Схема пути занимает место кадра, значит и ширину кадра — все 12 колонок. */
 .pc-path,
 /* Цифры — самостоятельный блок во всю ширину, как список пунктов и кадры. */
@@ -823,65 +760,8 @@ html[data-portfolio-surface="case"] body {
  * ширину. Сдвинутый текст рядом с ними и даёт чередование — если сдвинуть ещё
  * и кадр, разница исчезнет, а с ней и приём.
  */
-.pc-shots,
-.pc-rows,
-.pc-impact,
-.pc-next {
+.pc-shots {
   margin-inline-start: 0;
-}
-
-/*
- * Факты строкой под героем. Колонки автоматические: «Работа» длиннее остальных
- * втрое, и равные доли оставляли бы под годом пустое место в половину экрана.
- */
-.pc-facts {
-  /*
-   * Блок стоит сразу под кадром героя, а в макете расстояние от кадра до
-   * следующего блока — 80, а не 240 (кадр кончается на 1196, «О проекте» стоит
-   * на 1276). Гость наследует зазор того места, где стоит.
-   */
-  margin-block-start: var(--pc-gap-after-shot);
-  padding-block: 24px;
-  border-block-start: 1px solid var(--pc-rule);
-  border-block-end: 1px solid var(--pc-rule);
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(24px, 4vw, 72px);
-}
-
-/*
- * ─── КОЛОНКА ФАКТОВ ЛИПКАЯ ─────────────────────────────────────────────────
- * Приём `arestov.design`, выбран владельцем 2026-08-13 из двух собранных
- * вариантов. Факты держатся весь скролл, чтобы на десятом экране подряд было
- * видно, чей это кейс, какого он года и какова была роль.
- *
- * (Липкая колонка снята владельцем — её разбор в компоненте.)
- */
-
-/*
- * Отбивка осталась от липкой КОЛОНКИ фактов, снятой владельцем: в строке она
- * опускала каждый следующий факт на 28 px, и «Клиент» стоял выше «Года».
- * В столбик факты складываются только на узком экране — там она и нужна.
- */
-@media (max-width: 639px) {
-  .pc-fact + .pc-fact {
-    margin-block-start: 28px;
-  }
-}
-
-.pc-label {
-  font-family: var(--pa-mono);
-  /* 16/22 в макете — доля, а не 13 px константой. */
-  font-size: var(--pc-meta-size);
-  line-height: 1.375;
-  letter-spacing: var(--pa-meta-tracking);
-  color: var(--pc-muted);
-}
-
-.pc-value {
-  margin-block-start: 8px;
-  font-size: var(--pc-value-size);
-  line-height: 1.35;
 }
 
 /*
@@ -1130,14 +1010,27 @@ ul.pc-section-text li + li {
 }
 
 /*
- * Мера пункта задаётся КОЛОНКОЙ грида (`--pc-item-col`), а не свойством текста:
- * процент у самого текста считался бы от ячейки, а не от ширины блока, и дал бы
- * 348 вместо 541. Разбор доли — у переменной.
+ * ─── МЕРА ПУНКТА — КОЛОНКИ СЕТКИ, А НЕ СВОЙСТВО ТЕКСТА ─────────────────────
+ *
+ * Процент у самого текста считался бы от ячейки, а не от ширины блока, и дал бы
+ * 348 вместо 541.
+ *
+ * 🔴 Доля пришла из замечания владельца «текст расположен не как у меня,
+ * проверь сетку» (14.08.2026): в макете текст пункта занимает 731 из 1800 —
+ * 41 % внутренней ширины, и ровно это дают колонки 5–10. Мера `52ch` при
+ * Manrope 20 давала 49 %, то есть строку длиннее макетной. Плата известна и
+ * принята: 43–45 знаков в строке вместо рекомендованных 50–70.
+ *
+ * До перехода на сетку то же самое задавали `--pc-shift`, `--pc-num-col` и
+ * `--pc-item-col` — переменные сняты 15.09.2026, их не читало ни одно правило.
  */
 .pc-item-text {
   /* 5 колонок с пятой — 731 из 1800 в макете стоит ровно здесь. */
   grid-column: 5 / 10;
-  max-inline-size: var(--pc-text-max);
+  /*
+   * Мера снята: её задаёт колонка. Строка `max-inline-size: var(--pc-text-max)`
+   * стояла здесь же и перебивалась следующей — объявление не работало.
+   */
   max-inline-size: 100%;
   font-family: var(--pc-text-font);
   font-size: var(--pc-body-size);
@@ -1741,142 +1634,6 @@ ul.pc-section-text li + li {
   }
 }
 
-/* ─── Таблица строками ─────────────────────────────────────────────────────
- * «Что сделал» и «Результат» — тот же приём, что «Что под капотом» в кадре
- * владельца: строка с линией сверху, метка слева, содержание со второй
- * половины.
- */
-.pc-rows {
-  margin-block-start: var(--pc-block);
-  border-block-start: 1px solid var(--pc-rule);
-}
-
-.pc-row {
-  display: grid;
-  grid-template-columns: minmax(160px, 1fr) 1fr;
-  gap: var(--pc-gap);
-  padding-block: 24px;
-  border-block-end: 1px solid var(--pc-rule);
-}
-
-.pc-row ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.pc-row li {
-  font-size: var(--pc-value-size);
-  line-height: 1.45;
-}
-
-.pc-row li + li {
-  margin-block-start: 12px;
-}
-
-/* ─── Плоскость результата ─────────────────────────────────────────────────
- * Кобальт во всю ширину навылет — та же плоскость, что приходит синим экраном
- * компании на `/archive`. Здесь она стоит там, где у собранных сайтов ничего
- * нет: блок с числами результата нашёлся у одного сайта из десяти.
- */
-.pc-impact {
-  margin-block-start: var(--pc-block);
-  margin-inline: calc(-1 * var(--pa-field));
-  padding: clamp(32px, 6vh, 72px) var(--pa-field);
-  background-color: var(--pa-cobalt);
-  /* Единственный тёмный остров на светлой странице — цвет текста внутри задаётся
-     здесь, иначе он наследует чернила страницы (замер дал 2.24:1). */
-  color: var(--pa-paper);
-}
-
-/* Метка на кобальте: приглушённый белый вместо серого со светлой страницы —
-   серый на синем даёт 2.2:1. */
-.pc-label--on-cobalt {
-  color: var(--pa-paper-a80);
-}
-
-.pc-impact-grid {
-  margin-block-start: 32px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: clamp(24px, 4vw, 56px);
-}
-
-.pc-metric-value {
-  font-family: var(--pa-mono);
-  font-size: clamp(28px, var(--pa-inner) / 26, 56px);
-  font-weight: 300;
-  line-height: 1;
-}
-
-.pc-metric-caption {
-  margin-block-start: var(--p-space-3);
-  font-family: var(--pa-mono);
-  font-size: 12px;
-  line-height: 1.4;
-  opacity: 0.8;
-}
-
-/* ─── Соседний кейс ────────────────────────────────────────────────────────── */
-
-.pc-next {
-  margin-block-start: var(--pc-block);
-  margin-block-end: var(--pa-field);
-}
-
-.pc-next-card {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--pc-gap);
-  inline-size: 100%;
-  padding: 28px 0;
-  border: 0;
-  border-block-start: 1px solid var(--pc-rule);
-  border-block-end: 1px solid var(--pc-rule);
-  background: transparent;
-  color: var(--pc-fg);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-  transition:
-    background-color 0.3s var(--pa-ease-out),
-    color 0.3s var(--pa-ease-out),
-    padding-inline 0.3s var(--pa-ease-out);
-}
-
-.pc-next-title {
-  font-size: clamp(24px, var(--pa-inner) / 30, 48px);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.pc-next-meta {
-  font-family: var(--pa-mono);
-  font-size: var(--pa-meta-size);
-  letter-spacing: var(--pa-meta-tracking);
-  color: var(--pc-muted);
-}
-
-/*
- * Инверсия — тот же отклик, что у строк кейсов на синем экране `/archive`, но
- * зеркальный: там белая плашка на кобальте, здесь кобальтовая на светлом. Так
- * сохраняется и приём, и связь с плоскостью «Итог». Обратный вариант — кобальт
- * буквами на чернильной плашке — давал бы 2.5:1 и не читался.
- */
-.pc-next-card:hover,
-.pc-next-card:focus-visible {
-  padding-inline: 20px;
-  background-color: var(--pa-cobalt);
-  color: var(--pa-paper);
-  outline: 0;
-}
-
-.pc-next-card:hover .pc-next-meta,
-.pc-next-card:focus-visible .pc-next-meta {
-  color: var(--pa-paper-a85);
-}
-
 /*
  * ─── ПЕРЕХОД К СОСЕДНИМ КЕЙСАМ: КОБАЛЬТОВАЯ ПЛОСКОСТЬ ──────────────────────
  * Правка владельца 2026-08-17: «на синем кобальте с анимациями (вроде ранее был
@@ -1983,8 +1740,8 @@ ul.pc-section-text li + li {
    * названия на 10 px, оба короче 0.35 с, без параллакса, повторов и мигания.
    */
   transition:
-    background-color 0.3s var(--pa-ease-out),
-    color 0.3s var(--pa-ease-out);
+    background-color var(--pa-dur-tick) var(--pa-ease-out),
+    color var(--pa-dur-tick) var(--pa-ease-out);
 }
 
 /* Следующий кейс выровнен по правому краю — переходы смотрят в свои стороны. */
@@ -2138,7 +1895,7 @@ ul.pc-section-text li + li {
 .pa-curtain {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: var(--s-layer-curtain);
   pointer-events: none;
   padding: var(--pa-field);
   background-color: var(--pa-cobalt);
@@ -2181,19 +1938,6 @@ ul.pc-section-text li + li {
  * колонку остаётся 140 px — метка и значение туда не встают.
  */
 @media (max-width: 899px) {
-  :root {
-    /* Сдвиг снимается целиком: треть от 390 — это 130 px, и текст встал бы в
-       колонку шириной с ладонь. Приём горизонтальный, и на узком экране ему
-       негде работать. */
-    --pc-shift: 0px;
-    /* Колонка номера отвязывается от сдвига и остаётся своей: без неё номер
-       наехал бы на текст, а вместе с текстом он читался бы как часть фразы. */
-    --pc-num-col: 28px;
-    /* Доля 41 % от 350 — это 143 px, колонка в четыре слова. На узком экране
-       текст пункта занимает всё оставшееся место. */
-    --pc-item-col: 1fr;
-  }
-
   /*
    * 🔴 СДВИГ СНИМАЕТСЯ КОЛОНКАМИ, А НЕ ПЕРЕМЕННОЙ.
    *
@@ -2244,10 +1988,6 @@ ul.pc-section-text li + li {
     max-inline-size: 100%;
   }
 
-
-  .pc-row {
-    grid-template-columns: 1fr;
-  }
 
   .pc-shots {
     grid-template-columns: 1fr;

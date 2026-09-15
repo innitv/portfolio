@@ -68,7 +68,41 @@ export interface PortfolioCaseViewProps {
  * Внешний адрес остаётся резервом: кадра может не быть в манифесте, и тогда
  * лучше показать тяжёлый PNG, чем пустую рамку.
  */
-function ShotPlate({ eager, image }: { eager?: boolean; image: CaseImage }) {
+/**
+ * Позиция кадра на странице. От неё зависит не вид, а ВЕС: доля, которую
+ * изображение занимает внутри своей рамки, у каждой позиции своя.
+ */
+type ShotSlot = "hero" | "pair-narrow" | "pair-wide";
+
+/*
+ * 🔴 `sizes` объявляет ширину ИЗОБРАЖЕНИЯ, а не рамки.
+ *
+ * Внутри рамки изображение стоит долей: 55 % у героя, 83 % в паре. Пока `sizes`
+ * отдавал ширину рамки, браузер честно брал кадр вдвое крупнее показанного —
+ * замер на 1440 (DPR 1): герой рисуется 718 px и грузит 1600w (54.7 КБ вместо
+ * 18.1), пара — 348 px и 856w. На странице кейса это 201 КБ вместо 78.
+ *
+ * Доли ниже сняты измерением в браузере, а не выведены из макета. Ниже 900 пара
+ * складывается в одну колонку, и оба кадра занимают 83 % поля.
+ */
+const COLUMN_WIDE = "min(1320px, 100vw - 120px)";
+const COLUMN_NARROW = "100vw - 40px";
+
+const SHOT_SIZES: Record<ShotSlot, string> = {
+  hero: `(max-width: 899px) calc((${COLUMN_NARROW}) * 0.55), calc((${COLUMN_WIDE}) * 0.55)`,
+  "pair-narrow": `(max-width: 899px) calc((${COLUMN_NARROW}) * 0.83), calc((${COLUMN_WIDE}) * 0.263)`,
+  "pair-wide": `(max-width: 899px) calc((${COLUMN_NARROW}) * 0.83), calc((${COLUMN_WIDE}) * 0.542)`,
+};
+
+function ShotPlate({
+  eager,
+  image,
+  slot = "pair-wide",
+}: {
+  eager?: boolean;
+  image: CaseImage;
+  slot?: ShotSlot;
+}) {
   const key = imageKeyFromSrc(image.src);
 
   return (
@@ -77,7 +111,7 @@ function ShotPlate({ eager, image }: { eager?: boolean; image: CaseImage }) {
         alt={image.alt}
         decoding="async"
         loading={eager ? "eager" : "lazy"}
-        sizes="(max-width: 899px) calc(100vw - 40px), min(1320px, calc(100vw - 120px))"
+        sizes={SHOT_SIZES[slot]}
         src={key ? imageFallback(key) : image.src}
         srcSet={key ? imageSrcSet(key) : undefined}
       />
@@ -97,7 +131,15 @@ function ShotPlate({ eager, image }: { eager?: boolean; image: CaseImage }) {
  * «переключения нет для слайдера» — механика работала и тогда, но две точки 8 px
  * светлым по светлой подложке управлением не читались.
  */
-function CaseShot({ eager, image }: { eager?: boolean; image: CaseImage }) {
+function CaseShot({
+  eager,
+  image,
+  slot,
+}: {
+  eager?: boolean;
+  image: CaseImage;
+  slot?: ShotSlot;
+}) {
   const trackRef = React.useRef<HTMLDivElement>(null);
   const [active, setActive] = React.useState(0);
   const slides = [image, ...(image.more ?? [])];
@@ -105,7 +147,7 @@ function CaseShot({ eager, image }: { eager?: boolean; image: CaseImage }) {
   if (slides.length === 1) {
     return (
       <figure className="pc-shot">
-        <ShotPlate eager={eager} image={image} />
+        <ShotPlate eager={eager} image={image} slot={slot} />
         <figcaption>{image.caption}</figcaption>
       </figure>
     );
@@ -138,7 +180,7 @@ function CaseShot({ eager, image }: { eager?: boolean; image: CaseImage }) {
         >
           {slides.map((slide, index) => (
             <div className="pc-shot-slide" key={slide.src}>
-              <ShotPlate eager={eager && index === 0} image={slide} />
+              <ShotPlate eager={eager && index === 0} image={slide} slot={slot} />
             </div>
           ))}
         </div>
@@ -907,18 +949,12 @@ export function PortfolioCaseView({
     [company.cases, caseStudy.ai],
   );
 
-  /** Соседний кейс той же компании — увести дальше, а не оборвать страницу. */
-  const next = React.useMemo(() => {
-    const at = groupCases.findIndex((item) => item.id === caseStudy.id);
-    return groupCases[(at + 1) % groupCases.length];
-  }, [groupCases, caseStudy.id]);
-
   /*
     ─── СОСЕДИ ПО СПИСКУ КОМПАНИИ ────────────────────────────────────────────
     Правка владельца 2026-08-17: «добавь внизу страницы переход к следующему
     кейсу или предыдущему в зависимости от того, где находится человек».
 
-    🔴 Список НЕ замыкается в кольцо, в отличие от `next` выше. Кольцо показало
+    🔴 Список НЕ замыкается в кольцо. Кольцо показало
     бы «следующий» даже на последнем кейсе, приведя к первому — а человек на
     последнем должен видеть, что дальше некуда, и уходить назад. Это и есть
     «в зависимости от того, где находится»: у первого кейса нет предыдущего, у
@@ -1015,7 +1051,7 @@ export function PortfolioCaseView({
         */}
         <div className="pc-shots" data-testid="pc-hero" data-wide="true">
           {caseStudy.coverImage ? (
-            <CaseShot eager image={caseStudy.coverImage} />
+            <CaseShot eager image={caseStudy.coverImage} slot="hero" />
           ) : longread ? null : (
             <figure className="pc-shot">
               {/*
@@ -1099,7 +1135,13 @@ export function PortfolioCaseView({
             {introShots.length || !longread ? (
               <div className="pc-shots" data-testid="pc-intro-shots">
                 {introShots.length ? (
-                  introShots.map((shot) => <CaseShot image={shot} key={shot.src} />)
+                  introShots.map((shot, index) => (
+                    <CaseShot
+                      image={shot}
+                      key={shot.src}
+                      slot={index === 0 && introShots.length > 1 ? "pair-narrow" : "pair-wide"}
+                    />
+                  ))
                 ) : (
                   <>
                     <figure className="pc-shot">
@@ -1430,8 +1472,12 @@ export function PortfolioCaseView({
                           <div className="pc-shot-frame" data-empty="true" />
                         </figure>
                       ) : null}
-                      {shots.map((shot) => (
-                        <CaseShot image={shot} key={shot.src} />
+                      {shots.map((shot, index) => (
+                        <CaseShot
+                          image={shot}
+                          key={shot.src}
+                          slot={index === 0 && shots.length > 1 ? "pair-narrow" : "pair-wide"}
+                        />
                       ))}
                     </div>
                   ) : section.flow ? (

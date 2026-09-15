@@ -622,6 +622,51 @@ test("слайдер кадров листается и держит полот�
   await expect(caption, "Подпись не пошла за кадром").not.toHaveText(first);
 });
 
+/*
+ * ─── КАДР НЕ ТЯЖЕЛЕЕ, ЧЕМ ПОКАЗАН ──────────────────────────────────────────
+ *
+ * Дефект 15.09.2026: `sizes` объявлял ширину РАМКИ, а изображение внутри неё
+ * занимает долю — 55 % у героя, 83 % в паре. Браузер честно брал ступень вдвое
+ * крупнее: на 1440 герой рисовался 718 px и грузил 1600w, пара — 348 px и 856w.
+ * Страница кейса весила 201 КБ картинок вместо 78.
+ *
+ * 🔴 Проверяется ОТНОШЕНИЕ выбранной ступени к показанной ширине, а не сама
+ * ступень: ступеней всего пять, и ближайшая сверху почти всегда чуть больше
+ * нужного — это норма. Порог 1.6 пропускает округление до ступени и ловит
+ * кратную ошибку: у прежнего дефекта отношение было 2.2 и 2.5.
+ */
+test("кадры не грузятся крупнее, чем показаны", async ({ page }) => {
+  await page.goto(portfolioUrl("/a3/case/dashboard-redesign"));
+  await expect(page.getByTestId("pc-hero")).toBeVisible();
+
+  /* Кадры ленивые: без прокрутки нижние не начнут грузиться вовсе. */
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(1500);
+
+  const shots = await page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLImageElement>(".pc-shot-frame img"))
+      .filter((node) => node.currentSrc && node.getBoundingClientRect().width > 0)
+      .map((node) => {
+        const step = node.currentSrc.match(/-(\d+)\.webp$/);
+        return {
+          shown: Math.round(node.getBoundingClientRect().width * window.devicePixelRatio),
+          step: step ? Number(step[1]) : 0,
+          src: node.currentSrc.split("/").pop() ?? "",
+        };
+      }),
+  );
+
+  expect(shots.length, "Кадры не загрузились — проверять нечего").toBeGreaterThan(2);
+
+  for (const shot of shots) {
+    expect(shot.step, `Ступень не прочиталась: ${shot.src}`).toBeGreaterThan(0);
+    expect(
+      shot.step / shot.shown,
+      `${shot.src}: ступень ${shot.step} при показе ${shot.shown}`,
+    ).toBeLessThan(1.6);
+  }
+});
+
 test("на странице кейса нет блоков вне макета", async ({ page }) => {
   await page.goto(portfolioUrl("/a3/case/dashboard-redesign"));
   await expect(page.getByTestId("pc-title")).toBeVisible();

@@ -12,20 +12,6 @@ const outDir = path.resolve(rootDir, "dist");
 function portfolioProductionHints() {
   return {
     name: "portfolio-production-hints",
-    transformIndexHtml() {
-      return [
-        {
-          tag: "link",
-          attrs: { rel: "dns-prefetch", href: "https://framerusercontent.com" },
-          injectTo: "head-prepend" as const,
-        },
-        {
-          tag: "link",
-          attrs: { rel: "preconnect", href: "https://framerusercontent.com", crossorigin: "" },
-          injectTo: "head-prepend" as const,
-        },
-      ];
-    },
     closeBundle() {
       const htaccessSource = path.join(rootDir, "public", ".htaccess");
       if (existsSync(htaccessSource)) {
