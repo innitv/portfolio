@@ -12,6 +12,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "typecheck": "tsc --noEmit",
+    "images": "python tools/build-portfolio-avif.py",
     "prerender": "node tools/prerender-portfolio.mjs",
     "deploy": "yarn build && yarn prerender && node tools/deploy-portfolio-regru.mjs",
     "deploy:dry-run": "yarn build && yarn prerender && node tools/deploy-portfolio-regru.mjs --dry-run",

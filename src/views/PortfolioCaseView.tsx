@@ -10,6 +10,7 @@ import {
   imageFallback,
   imageKeyFromSrc,
   imageSrcSet,
+  imageSrcSetAvif,
   type CaseDetailSection,
   type CaseImage,
   type CaseStudy,
@@ -104,17 +105,30 @@ function ShotPlate({
   slot?: ShotSlot;
 }) {
   const key = imageKeyFromSrc(image.src);
+  const avif = key ? imageSrcSetAvif(key) : undefined;
 
   return (
     <div className="pc-shot-frame" data-surface={image.surface}>
-      <img
-        alt={image.alt}
-        decoding="async"
-        loading={eager ? "eager" : "lazy"}
-        sizes={SHOT_SIZES[slot]}
-        src={key ? imageFallback(key) : image.src}
-        srcSet={key ? imageSrcSet(key) : undefined}
-      />
+      {/*
+        🔴 Порядок источников значим: браузер берёт ПЕРВЫЙ подходящий. AVIF
+        весит на треть меньше webp при неотличимом на глаз качестве (замер на
+        наших кадрах: −21 % на плотном интерфейсном скриншоте, −53 % на карте
+        опций), webp остаётся резервом для Safari до 16.4.
+
+        `<img>` внутри обязателен: он и последний резерв, и носитель alt,
+        размеров и ленивой загрузки — `<picture>` сам ничего не рисует.
+      */}
+      <picture>
+        {avif ? <source sizes={SHOT_SIZES[slot]} srcSet={avif} type="image/avif" /> : null}
+        <img
+          alt={image.alt}
+          decoding="async"
+          loading={eager ? "eager" : "lazy"}
+          sizes={SHOT_SIZES[slot]}
+          src={key ? imageFallback(key) : image.src}
+          srcSet={key ? imageSrcSet(key) : undefined}
+        />
+      </picture>
     </div>
   );
 }

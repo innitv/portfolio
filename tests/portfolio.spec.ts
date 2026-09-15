@@ -651,7 +651,7 @@ test("кадры не грузятся крупнее, чем показаны",
     Array.from(document.querySelectorAll<HTMLImageElement>(".pc-shot-frame img"))
       .filter((node) => node.currentSrc && node.getBoundingClientRect().width > 0)
       .map((node) => {
-        const step = node.currentSrc.match(/-(\d+)\.webp$/);
+        const step = node.currentSrc.match(/-(\d+)\.(?:webp|avif)$/);
         return {
           shown: Math.round(node.getBoundingClientRect().width * window.devicePixelRatio),
           step: step ? Number(step[1]) : 0,
@@ -668,6 +668,13 @@ test("кадры не грузятся крупнее, чем показаны",
       shot.step / shot.shown,
       `${shot.src}: ступень ${shot.step} при показе ${shot.shown}`,
     ).toBeLessThan(1.6);
+
+    /*
+      Формат: в браузере с поддержкой AVIF кадр обязан прийти в нём, иначе
+      `<picture>` собран неправильно — а заметить это по виду нельзя, картинка
+      та же, просто на треть тяжелее. Chromium приёмки AVIF поддерживает.
+    */
+    expect(shot.src, `${shot.src}: кадр пришёл не в AVIF`).toMatch(/\.avif$/);
   }
 });
 

@@ -2634,6 +2634,21 @@ export function imageSrcSet(key: OptimizedImageKey): string {
     .join(", ")
 }
 
+/**
+ * Тот же набор ширин в AVIF — или ничего, если формат собран не полностью.
+ *
+ * 🔴 Частичного набора не бывает намеренно: `<picture>` выбирает формат один
+ * раз на весь `srcset`, и пропущенная ширина означала бы запрос файла, которого
+ * нет. Признак `avif` ставит генератор манифеста, когда AVIF собран во ВСЕХ
+ * ширинах ключа.
+ */
+export function imageSrcSetAvif(key: OptimizedImageKey): string | undefined {
+  const image = optimizedImages[key]
+  if (!("avif" in image)) return undefined
+
+  return image.widths.map((width) => `/assets/optimized/${key}-${width}.avif ${width}w`).join(", ")
+}
+
 /** Файл минимальной ширины — резерв для `src`, когда `srcSet` не применился. */
 export function imageFallback(key: OptimizedImageKey): string {
   return `/assets/optimized/${key}-${optimizedImages[key].widths[0]}.webp`
