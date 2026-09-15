@@ -58,6 +58,7 @@ const GUARDED = [
 const TYPE_GUARDED = [...TOKEN_FILES, ...GUARDED.filter((file) => file.endsWith(".css"))]
 
 const problems = []
+let checkedPrimitives = 0
 
 /** Строки комментариев: там значения — часть объяснения, а не стиль. */
 function stripComments(text) {
@@ -122,7 +123,7 @@ for (const file of GUARDED) {
 /*
  * 🔴 Шкала пространства — кратная четырём, и это проверяется, а не подразумевается.
  *
- * Инвентаризация 2026-09-13 нашла шестнадцать уникальных значений отступов, пять
+ * Инвентаризация 2026-09-13 нашла шестнадцать уникальных значений отступов, шесть
  * из них вне четвёрки: 6, 9, 10, 13, 14, 18. Каждое по отдельности выглядело
  * осмысленным — подбиралось под конкретное место, — и вместе они складывались в
  * шкалу, которой не существует.
@@ -326,6 +327,96 @@ for (const [cssName, group, tsName, kind] of PAIRS) {
   }
 }
 
+/* ─── 5. Источник значений: JSON против CSS ─────────────────────────────────
+ *
+ * `design/tokens/portfolio/primitives.json` — источник правды, `portfolio-tokens.css`
+ * — ручной перенос. Правило проекта требует править оба; до 15.09.2026 его
+ * никто не проверял, и два примитива, заведённых ради контраста, в источник не
+ * попали.
+ *
+ * 🔴 Сверяются ЗНАЧЕНИЯ, а не имена: имя не выводится из пути механически
+ * (`color/alpha-paper/850` → `--p-paper-a850`, `color/signal/red-500` →
+ * `--p-red-500`). Сверка по именам потребовала бы словаря соответствий — ещё
+ * одного места, которое разойдётся.
+ *
+ * Запись нормализуется с обеих сторон: `#ffffff` и `#fff` — одно значение,
+ * `[0.4, 0, 0.15, 1]` и `cubic-bezier(0.4, 0, 0.15, 1)` — одно, список
+ * гарнитур в массиве и в строке — одно.
+ */
+const PRIMITIVES_JSON = "design/tokens/portfolio/primitives.json"
+const PRIMITIVES_CSS = TOKEN_FILES[0]
+
+function normalizeValue(value) {
+  if (Array.isArray(value)) {
+    /* Кривая — четыре числа; гарнитура — список имён. */
+    return value.every((item) => typeof item === "number")
+      ? `cubic-bezier(${value.join(",")})`
+      : value
+          .map((item) => String(item).replace(/["']/g, "").trim().toLowerCase().replace(/\s+/g, " "))
+          .join(",")
+  }
+
+  /*
+   * Пробелы схлопываются, но НЕ вырезаются: внутри имени гарнитуры пробел
+   * значим («Manrope Variable»), а вокруг запятых и скобок — нет.
+   */
+  let text = String(value).trim().toLowerCase().replace(/\s+/g, " ")
+  text = text.replace(/["']/g, "").replace(/\s*([,()])\s*/g, "$1")
+  /* #ffffff и #fff — одно и то же. */
+  const short = text.match(/^#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3$/)
+  if (short) text = `#${short[1]}${short[2]}${short[3]}`
+  return text
+}
+
+function jsonLeaves(node, path = []) {
+  const rows = []
+  for (const [key, value] of Object.entries(node)) {
+    if (key.startsWith("$")) continue
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      if ("$value" in value) rows.push([path.concat(key).join("/"), value.$value])
+      else rows.push(...jsonLeaves(value, path.concat(key)))
+    }
+  }
+  return rows
+}
+
+try {
+  const source = jsonLeaves(JSON.parse(readFileSync(PRIMITIVES_JSON, "utf8")))
+    .filter(([, value]) => !(typeof value === "string" && value.startsWith("{")))
+
+  /* Значения --p-* из переноса: только сырые, алиасы сверять не с чем. */
+  const cssPrimitives = new Map()
+  for (const line of readFileSync(PRIMITIVES_CSS, "utf8").split("\n")) {
+    const match = line.match(/^\s*(--p-[\w-]+)\s*:\s*([^;]+);/)
+    if (match && !match[2].includes("var(")) cssPrimitives.set(match[1], normalizeValue(match[2]))
+  }
+
+  const cssValues = new Set(cssPrimitives.values())
+  const jsonValues = new Set(source.map(([, value]) => normalizeValue(value)))
+
+  for (const [name, value] of source) {
+    if (!cssValues.has(normalizeValue(value))) {
+      problems.push(
+        `${PRIMITIVES_JSON} → ${name} = ${JSON.stringify(value)}: такого значения нет ни у одной ` +
+          `--p-* в ${PRIMITIVES_CSS} — источник и перенос разошлись`,
+      )
+    }
+  }
+
+  for (const [name, value] of cssPrimitives) {
+    if (!jsonValues.has(value)) {
+      problems.push(
+        `${PRIMITIVES_CSS} → ${name} = ${value}: значения нет в ${PRIMITIVES_JSON} — примитив завели ` +
+          `в переносе, а в источник не внесли`,
+      )
+    }
+  }
+
+  checkedPrimitives = source.length
+} catch (error) {
+  problems.push(`${PRIMITIVES_JSON} не прочитался: ${error.message}`)
+}
+
 // ─── Итог ────────────────────────────────────────────────────────────────────
 if (problems.length) {
   console.error(`fail · расхождений: ${problems.length}\n`)
@@ -339,5 +430,5 @@ if (problems.length) {
 
 console.log(
   `pass · значения не пишутся по месту · ${declared.size} переменных объявлено ·` +
-    ` ${PAIRS.length} пар CSS↔TS совпадают`,
+    ` ${PAIRS.length} пар CSS↔TS совпадают · ${checkedPrimitives} примитивов сверены с JSON`,
 )
