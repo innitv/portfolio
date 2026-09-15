@@ -1,3 +1,7 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -665,6 +669,105 @@ test("кадры не грузятся крупнее, чем показаны",
       `${shot.src}: ступень ${shot.step} при показе ${shot.shown}`,
     ).toBeLessThan(1.6);
   }
+});
+
+/*
+ * ─── ГЛАВНАЯ ПОД ЛИСТОМ ВЫКЛЮЧЕНА, А ПОСЛЕ ЗАКРЫТИЯ — НЕТ ───────────────────
+ *
+ * Дефект 15.09.2026: Shift+Tab с «← все работы» уводил фокус на имя компании
+ * ПОД плоскостью — кольца фокуса не видно, нажатие уходит в лист. Достижимыми
+ * были шесть элементов: три контакта и три имени компаний.
+ *
+ * 🔴 Проверяются ОБА конца, и второй важнее первого. Выключить поддерево легко;
+ * ошибиться порядком — ещё легче: `closeCompany` возвращает фокус на ячейку до
+ * смены маршрута, и пока `inert` не снят, `.focus()` не делает ничего и молча.
+ * Тест на одном только «ноль достижимых» прошёл бы и на сломанном возврате.
+ */
+test("главная под синим экраном не ловит фокус", async ({ page }) => {
+  await page.goto(portfolioUrl("/a3"));
+  await expect(page.getByTestId("pa-sheet")).toBeVisible();
+
+  const reachable = async () =>
+    page.evaluate(() => {
+      const screen = document.querySelector(".pa-screen");
+      if (!screen) return -1;
+      return Array.from(
+        screen.querySelectorAll('a[href], button, [tabindex]:not([tabindex="-1"])'),
+      ).filter((node) => !node.closest("[inert]")).length;
+    });
+
+  expect(await reachable(), "Под плоскостью остались узлы, ловящие фокус").toBe(0);
+
+  const sheet = page.getByTestId("pa-sheet");
+  await expect(sheet).toHaveAttribute("role", "dialog");
+  await expect(sheet).toHaveAttribute("aria-modal", "true");
+
+  /* Закрытие: фокус обязан вернуться на ту ячейку, с которой экран открыли. */
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(new RegExp(`${portfolioUrl("/")}$`));
+
+  const back = await page.evaluate(() => ({
+    cls: document.activeElement?.className ?? "",
+    loose: document.querySelectorAll(".pa-screen [inert]").length,
+  }));
+  expect(back.cls, "Фокус не вернулся на имя компании").toContain("pa-cell");
+  expect(await reachable(), "Главная осталась выключенной после закрытия").toBeGreaterThan(0);
+});
+
+/*
+ * ─── ЧТО ВИДИТ ТОТ, КТО НЕ ИСПОЛНЯЕТ JS ────────────────────────────────────
+ *
+ * Мессенджеры, соцсети и часть поисковых роботов берут только исходник
+ * страницы. До 15.09.2026 все четырнадцать адресов отдавали один `<title>`,
+ * пустой `<div id="root">` и ни одного описания — ссылка на кейс
+ * разворачивалась пустой карточкой, а в выдаче страницы выглядели одной.
+ *
+ * 🔴 Проверяются ФАЙЛЫ СБОРКИ, а не ответы превью. `vite preview` отдаёт
+ * `dist/a3/index.html` только по адресу со слешем, а без слеша применяет свой
+ * SPA-fallback; на хостинге за это отвечает правило в `.htaccess`, которого у
+ * превью нет. Предмет проверки — то, что уезжает на хостинг, поэтому читается
+ * то, что сборка положила на диск, и отдельно — что правило отдачи на месте.
+ */
+test("каждый адрес отдаёт свои мета и текст без JS", async () => {
+  /* Тесты — модули ESM, `__dirname` в них нет; корень считается от файла. */
+  const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "dist");
+
+  const pages = [
+    { file: "index.html", title: "продуктовый дизайнер", text: "Archive" },
+    { file: "a3/index.html", title: "А3 — кейсы", text: "Редизайн главной" },
+    { file: "rtk/case/subscriptions/index.html", title: "Подписки · РТК", text: "Подписки" },
+    { file: "smlt/case/options-map/index.html", title: "Карта опций · Самолет", text: "Карта опций" },
+  ];
+
+  const seen = new Set<string>();
+
+  for (const page of pages) {
+    const target = path.join(dist, page.file);
+    expect(fs.existsSync(target), `${page.file}: файл не собран — забыт \`yarn prerender\`?`).toBe(true);
+
+    const html = fs.readFileSync(target, "utf8");
+    const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? "";
+
+    expect(title, `${page.file}: заголовок не свой`).toContain(page.title);
+    expect(seen.has(title), `${page.file}: заголовок повторяет другой адрес`).toBe(false);
+    seen.add(title);
+
+    expect(html, `${page.file}: нет описания`).toMatch(/<meta name="description" content="[^"]{40,}"/);
+    expect(html, `${page.file}: нет канонического адреса`).toContain('rel="canonical"');
+    expect(html, `${page.file}: нет карточки ссылки`).toContain('property="og:image"');
+    expect(html, `${page.file}: в исходнике нет текста страницы`).toContain(page.text);
+  }
+
+  /* Файлы бесполезны, пока их не отдаёт сервер: правило живёт в .htaccess. */
+  const htaccess = fs.readFileSync(path.join(dist, ".htaccess"), "utf8");
+  expect(htaccess, "Пререндер не отдаётся: нет правила в .htaccess").toContain(
+    "%{DOCUMENT_ROOT}%{REQUEST_URI}/index.html -f",
+  );
+
+  /* Индексация: карта сайта и robots собираются тем же прогоном. */
+  const sitemap = fs.readFileSync(path.join(dist, "sitemap.xml"), "utf8");
+  expect(sitemap.match(/<loc>/g)?.length ?? 0, "В карте сайта не все адреса").toBe(14);
+  expect(fs.readFileSync(path.join(dist, "robots.txt"), "utf8")).toContain("Sitemap:");
 });
 
 test("на странице кейса нет блоков вне макета", async ({ page }) => {

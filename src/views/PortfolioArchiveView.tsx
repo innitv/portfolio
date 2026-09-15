@@ -191,9 +191,38 @@ export function PortfolioArchiveView({
     }
   }, [])
 
+  /*
+    Главная под открытым листом выключается целиком.
+
+    🔴 Не `aria-hidden`, а `inert`: он снимает поддерево и из чтения диктором, и
+    из табуляции, и из нажатий одним свойством. Через `aria-hidden` пришлось бы
+    отдельно раздавать `tabindex="-1"` каждому из шести достижимых элементов, а
+    новый элемент на главной про это правило не узнал бы.
+  */
+  const screenRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const screen = screenRef.current
+    if (!screen) return
+
+    screen.inert = Boolean(openId)
+
+    return () => {
+      screen.inert = false
+    }
+  }, [openId])
+
   const closeCompany = React.useCallback(() => {
-    // Фокус возвращается на ту ячейку, с которой экран открыли, — до смены
-    // маршрута: после неё синего экрана в дереве уже нет.
+    /*
+      Фокус возвращается на ту ячейку, с которой экран открыли, — до смены
+      маршрута: после неё синего экрана в дереве уже нет.
+
+      🔴 `inert` снимается ПЕРЕД возвратом фокуса, а не после. Пока поддерево
+      выключено, `.focus()` на ячейке не делает ничего и молча: браузер не
+      ошибается, фокус просто остаётся на месте, а экран закрывается — то есть
+      дефект выглядел бы как «фокус улетел в body».
+    */
+    if (screenRef.current) screenRef.current.inert = false
     if (openId) cellsRef.current.get(openId)?.focus()
     onCloseCompany?.()
   }, [onCloseCompany, openId])
@@ -224,7 +253,7 @@ export function PortfolioArchiveView({
   return (
     <div className="pa-root" data-testid="pa-root">
 
-      <div className="pa-screen">
+      <div className="pa-screen" ref={screenRef}>
         <m.div className="pa-top" data-testid="pa-top" {...reveal(REVEAL_ORDER.top)}>
           {/*
             Слева подпись, а не кнопка: этот экран и есть главная сайта, вести

@@ -27,6 +27,7 @@ import { SheetCurtain } from "@/components/portfolio/archive/sheet-curtain"
 import { PortfolioArchiveView } from "./PortfolioArchiveView"
 import { PortfolioCaseView } from "./PortfolioCaseView"
 
+import { applyScreenMeta } from "./portfolio-meta"
 import { archiveCompanies, WORDMARK } from "./portfolio-archive.model"
 import { caseById, companyById, type CompanyId } from "./portfolio.data"
 
@@ -196,6 +197,22 @@ function moveFor(from: Screen, to: Screen): Move {
 
 export function PortfolioRoute() {
   const [screen, setScreen] = React.useState<Screen>(readAndCanonicalize)
+
+  /*
+    Заголовок вкладки, описание и карточка ссылки — свойство ЭКРАНА, а не сайта.
+    До 15.09.2026 четырнадцать адресов отдавали один `<title>` и ни одного
+    описания: в выдаче они выглядели одной страницей, а ссылка на кейс
+    разворачивалась в мессенджере пустой карточкой.
+
+    Эффект стоит здесь, потому что здесь единственная точка смены экрана: и
+    нажатия, и кнопки браузера идут через `navigate`, который двигает `screen`.
+  */
+  React.useEffect(() => {
+    applyScreenMeta(
+      screen.kind === "home" ? undefined : screen.companyId,
+      screen.kind === "case" ? screen.caseId : undefined,
+    )
+  }, [screen])
 
   /*
    * Занавес — цветная плоскость поверх страницы, одна на оба направления.

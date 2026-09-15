@@ -354,9 +354,18 @@ export function ArchiveSheet({
       {company ? (
         <section
           aria-label={company.wordmark}
+          /*
+            🔴 `role="dialog"` + `aria-modal` — это не новая механика, а имя для
+            той, что уже есть: Esc закрывает, фокус уходит внутрь и возвращается
+            на ячейку, главная под листом выключена `inert`. Без роли диктор
+            объявлял «раздел», и человек не знал, что стоит в перекрывающем слое
+            и что из него можно выйти.
+          */
+          aria-modal="true"
           className="pa-sheet"
           data-testid="pa-sheet"
           key={company.id}
+          role="dialog"
         >
           {/*
             ─── ПЛОСКОСТЬ ЕДЕТ ОТДЕЛЬНО ОТ ТЕКСТА ──────────────────────────
