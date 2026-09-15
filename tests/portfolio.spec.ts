@@ -777,6 +777,66 @@ test("каждый адрес отдаёт свои мета и текст бе�
   expect(fs.readFileSync(path.join(dist, "robots.txt"), "utf8")).toContain("Sitemap:");
 });
 
+/*
+ * ─── ПРОЗРАЧНОСТЬ ПЕРЕЖИВАЕТ ПЕРЕКОДИРОВАНИЕ ───────────────────────────────
+ *
+ * Дефект 15.09.2026, поймал владелец глазами: «у картинок появился чёрный
+ * фон». Полотна кадров прозрачные — мокап устройства стоит по центру, а фон
+ * даёт рамка страницы, — и приведение к RGB при кодировании в AVIF подменило
+ * альфу чёрным. Метаданные при этом были в порядке: размеры, ширины и формат
+ * правильные, картинка «есть».
+ *
+ * 🔴 Сравниваются ДВЕ версии одного кадра, а не абсолютный цвет. Прозрачность
+ * есть не у всех полотен: у героя подписок фон непрозрачный по замыслу, и
+ * проверка «угол обязан быть прозрачным» падала бы на нём. Предмет проверки —
+ * что перекодирование ничего не изменило.
+ */
+test("AVIF сохраняет прозрачность полотна", async ({ page }) => {
+  await page.goto(portfolioUrl("/a3/case/dashboard-redesign"));
+  await expect(page.getByTestId("pc-hero")).toBeVisible();
+
+  const pairs = await page.evaluate(async () => {
+    const corner = (url: string) =>
+      new Promise<number>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 8;
+          canvas.height = 8;
+          const context = canvas.getContext("2d");
+          if (!context) return reject(new Error("нет 2d-контекста"));
+          context.drawImage(image, 0, 0, 8, 8);
+          resolve(context.getImageData(0, 0, 1, 1).data[3]);
+        };
+        image.onerror = () => reject(new Error(`не загрузился: ${url}`));
+        image.src = url;
+      });
+
+    const sources = Array.from(document.querySelectorAll<HTMLImageElement>(".pc-shot-frame img"))
+      .map((node) => node.currentSrc)
+      .filter((src) => src.endsWith(".avif"));
+
+    const rows = [];
+    for (const avif of sources.slice(0, 3)) {
+      rows.push({
+        avif: await corner(avif),
+        name: avif.split("/").pop() ?? "",
+        webp: await corner(avif.replace(/\.avif$/, ".webp")),
+      });
+    }
+    return rows;
+  });
+
+  expect(pairs.length, "Кадры в AVIF не найдены — проверять нечего").toBeGreaterThan(0);
+
+  for (const pair of pairs) {
+    expect(
+      pair.avif,
+      `${pair.name}: угол полотна ${pair.avif} в AVIF против ${pair.webp} в webp`,
+    ).toBe(pair.webp);
+  }
+});
+
 test("на странице кейса нет блоков вне макета", async ({ page }) => {
   await page.goto(portfolioUrl("/a3/case/dashboard-redesign"));
   await expect(page.getByTestId("pc-title")).toBeVisible();

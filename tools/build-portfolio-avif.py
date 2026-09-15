@@ -47,8 +47,24 @@ def build_avif() -> tuple[int, int, int]:
             skipped += 1
             continue
 
-        image = Image.open(source).convert("RGB")
+        image = Image.open(source)
+        """
+        🔴 РЕЖИМ НЕ ПРИВОДИТСЯ К RGB.
+
+        Полотна кадров прозрачные: мокап устройства стоит по центру, а фон
+        отдаёт рамка страницы. `convert("RGB")` подменяет альфу чёрным — и
+        кадр приезжает на чёрной плашке. AVIF альфу умеет, поэтому исходный
+        режим сохраняется как есть; палитровые картинки приводятся к RGBA,
+        иначе кодировщик их не примет.
+        """
+        if image.mode not in ("RGB", "RGBA"):
+            image = image.convert("RGBA" if "A" in image.getbands() or image.mode == "P" else "RGB")
+
         image.save(target, format="AVIF", quality=QUALITY, speed=SPEED)
+
+        check = Image.open(target)
+        if ("A" in image.getbands()) != ("A" in check.getbands()):
+            raise SystemExit(f"{source.name}: альфа не пережила кодирование")
         made += 1
         saved += source.stat().st_size - target.stat().st_size
         print(f"  {source.name}: {target.stat().st_size // 1024} KB")
