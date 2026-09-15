@@ -21,6 +21,12 @@
  * у `html` — отсюда и корень, а не класс поверхности.
  */
 
+/*
+ * Два верхних тиера — примитивы и семантика. Всё ниже в этом файле и в слоях
+ * поверхностей ссылается на них, а не на значения.
+ */
+@import "./portfolio-tokens.css";
+
 @import "@fontsource-variable/manrope";
 @import "@fontsource-variable/jetbrains-mono";
 /* Playfair нужен ровно в одном начертании — курсивном, поэтому подключается
@@ -47,10 +53,10 @@
  */
 :root {
   /* ─── Цвет ─────────────────────────────────────────────────────────────── */
-  --pa-ink: #0b0b0b;
-  --pa-cobalt: #044ab3;
+  --pa-ink: var(--s-text-default);
+  --pa-cobalt: var(--s-surface-accent);
   /* Белый: текст и плоскости на чернилах и кобальте. */
-  --pa-paper: #fff;
+  --pa-paper: var(--s-text-on-ink);
   /*
    * Прежнее имя того же белого. Оно уже стояло в коде с фолбэком
    * `var(--pa-ink-invert, #fff)`, но самой переменной не существовало —
@@ -58,19 +64,26 @@
    */
   --pa-ink-invert: var(--pa-paper);
   /* Линия сетки-подложки. */
-  --pa-line: rgba(255, 255, 255, 0.12);
+  --pa-line: var(--s-border-on-ink);
   /* Приглушённый белый: служебные строки на чернилах. */
-  --pa-mute: rgba(255, 255, 255, 0.45);
-  /* Полупрозрачный белый: приглушение в цвете, а не в `opacity`. */
-  --pa-paper-a85: rgba(255, 255, 255, 0.85);
-  --pa-paper-a80: rgba(255, 255, 255, 0.8);
-  --pa-paper-a55: rgba(255, 255, 255, 0.55);
-  --pa-paper-a30: rgba(255, 255, 255, 0.3);
-  --pa-paper-a16: rgba(255, 255, 255, 0.16);
+  --pa-mute: var(--s-text-muted);
+  /*
+   * Полупрозрачный белый: приглушение в цвете, а не в `opacity`.
+   *
+   * 🔴 Имена этой пятёрки value-based — ступень прозрачности стоит прямо в
+   * имени. Это долг, записанный в `design/INVENTORY.md`: роли у них разные
+   * (подпись, кромка, подложка), и разводить их надо по ролям, а не по числу.
+   * Пока — прямые ссылки на примитив, чтобы значение жило в одном месте.
+   */
+  --pa-paper-a85: var(--p-paper-a850);
+  --pa-paper-a80: var(--p-paper-a800);
+  --pa-paper-a55: var(--p-paper-a550);
+  --pa-paper-a30: var(--p-paper-a300);
+  --pa-paper-a16: var(--p-paper-a160);
   /* Мета карточки: серый по макету, не белый с альфой. */
-  --pa-soft: #8a8a8a;
+  --pa-soft: var(--s-text-quiet);
   /* Мета на наведении — холодный отсвет кобальта. */
-  --pa-soft-hover: #9bb8e8;
+  --pa-soft-hover: var(--s-text-hover);
 
   /* ─── Движение ─────────────────────────────────────────────────────────── */
   /*
@@ -78,26 +91,28 @@
    * идут 0.72 с, но это ТРИ разных решения, совпавших числом: у каждого своя
    * история подбора, и менять их надо порознь. Поэтому три имени, а не одно.
    */
-  --pa-dur-sheet-in: 0.72s;
-  --pa-dur-sheet-out: 0.72s;
-  --pa-dur-curtain: 0.72s;
+  --pa-dur-sheet-in: var(--p-dur-sheet);
+  /* Сборка полосы Archive из квадратов при заходе. */
+  --pa-dur-boot: var(--p-dur-boot);
+  --pa-dur-sheet-out: var(--p-dur-sheet);
+  --pa-dur-curtain: var(--p-dur-sheet);
   /* Появление блока содержимого и шаг лесенки. */
-  --pa-dur-item: 0.52s;
-  --pa-delay-items: 0.38s;
-  --pa-stagger-items: 0.06s;
+  --pa-dur-item: var(--p-dur-item);
+  --pa-delay-items: var(--p-delay-items);
+  --pa-stagger-items: var(--p-delay-stagger-items);
   /* Проявление блоков главной: своя лесенка, чуть медленнее и шире шагом. */
-  --pa-dur-reveal: 0.5s;
-  --pa-stagger-reveal: 0.07s;
+  --pa-dur-reveal: var(--p-dur-reveal);
+  --pa-stagger-reveal: var(--p-delay-stagger-reveal);
   /* Отклик на наведение — единственная длительность интерфейсной мелочи. */
-  --pa-dur-hover: 0.2s;
+  --pa-dur-hover: var(--p-dur-hover);
 
   /* Кривые. Подобраны замером на кадрах, разбор — в `archive-sheet.tsx`. */
-  --pa-ease-in-sheet: cubic-bezier(0.4, 0, 0.15, 1);
-  --pa-ease-out-sheet: cubic-bezier(0.33, 1, 0.68, 1);
-  --pa-ease-curtain-out: cubic-bezier(0.4, 0.3, 0.3, 1);
-  --pa-ease-item: cubic-bezier(0.16, 1, 0.3, 1);
+  --pa-ease-in-sheet: var(--p-ease-in-sheet);
+  --pa-ease-out-sheet: var(--p-ease-out-sheet);
+  --pa-ease-curtain-out: var(--p-ease-curtain-out);
+  --pa-ease-item: var(--p-ease-item);
   /* Разгон болида по полосе: своя кривая, не из набора экранов. */
-  --pa-ease-race: cubic-bezier(0.3, 0.02, 0.2, 1);
+  --pa-ease-race: var(--p-ease-race);
 
   /* ─── Заезд ─────────────────────────────────────────────────────────────
    * 🔴 Длительность и путь были записаны фолбэками — `var(--pa-race, 4.5s)` и
@@ -106,26 +121,26 @@
    * запасные числа. Фолбэк, который работает всегда, неотличим от настройки,
    * которая не работает никогда (разбор 2026-08-15).
    */
-  --pa-dur-race: 4.5s;
+  --pa-dur-race: var(--p-dur-race);
   --pa-race-distance: 1200px;
   /* Светофор заезда: единственные две хроматические точки помимо кобальта. */
-  --pa-race-red: #e11d2e;
-  --pa-race-green: #27c46b;
+  --pa-race-red: var(--s-status-danger);
+  --pa-race-green: var(--s-status-go);
   /* Отклик мелких элементов: флаг, лампы, подписи. */
-  --pa-dur-tick: 0.3s;
-  --pa-dur-flag: 0.32s;
-  --pa-dur-flag-slow: 0.34s;
+  --pa-dur-tick: var(--p-dur-tick);
+  --pa-dur-flag: var(--p-dur-flag);
+  --pa-dur-flag-slow: var(--p-dur-flag-slow);
 
   /* ─── Гарнитуры ────────────────────────────────────────────────────────── */
-  --pa-sans: "Manrope Variable", "Manrope", system-ui, sans-serif;
-  --pa-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
-  --pa-serif: "Playfair Display Variable", "Playfair Display", Georgia, serif;
+  --pa-sans: var(--p-font-sans);
+  --pa-mono: var(--p-font-mono);
+  --pa-serif: var(--p-font-serif);
 
   /* ─── Каркас ───────────────────────────────────────────────────────────── */
   /* Поле контейнера со всех сторон и одновременно начало отсчёта сетки. */
-  --pa-field: 60px;
+  --pa-field: var(--s-space-field);
   /* Сторона клетки подложки. Квадратная: один шаг на обе оси. */
-  --pa-cell: 60px;
+  --pa-cell: var(--s-space-grid);
   --pa-grid-opacity: 0.45;
   /* Ширина, доступная содержимому. Из неё считаются все кегли. */
   --pa-inner: calc(100vw - 2 * var(--pa-field));
@@ -142,7 +157,7 @@
    * `--pa-inner`, делённая на отношение. Знаменатели чуть больше этих чисел —
    * разница и есть воздух справа, который держит макет.
    */
-  --pa-word-size: clamp(34px, var(--pa-inner) / 5.1, 130px);
+  --pa-word-size: clamp(36px, var(--pa-inner) / 5.1, 132px);
   --pa-word-leading: 0.92;
   /* Трекинг −2.6 при кегле 130 — это −0.02em; в долях кегля он переносится на
      любой размер, в пикселях бы разъехался. */
@@ -152,9 +167,9 @@
   --pa-top-leading: 18px;
 
   /* ─── Мелкий текст ─────────────────────────────────────────────────────── */
-  --pa-meta-size: 13px;
+  --pa-meta-size: var(--p-size-meta);
   --pa-meta-leading: 1.35;
-  --pa-meta-tracking: 0.78px;
+  --pa-meta-tracking: var(--p-tracking-meta);
 
   /*
    * Прежнее имя кривой появления: то же значение, другая роль — отклик мелких
@@ -191,20 +206,15 @@
 }
 
 /* ─── Диапазоны каркаса ────────────────────────────────────────────────────
- * Кегли считаются формулами и меняются плавно, поэтому здесь только поле и
- * клетка — величины, от которых зависит вся остальная арифметика.
+ * 🔴 ЗДЕСЬ БОЛЬШЕ НЕТ МЕДИАЗАПРОСОВ, И ЭТО РЕШЕНИЕ.
+ *
+ * До 14.09.2026 поле и клетка переопределялись прямо тут, на двух границах.
+ * Величины были верные, а устройство — нет: по имени `--pa-field` нельзя было
+ * узнать, что значение зависит от ширины экрана, и правка требовала помнить
+ * про три места сразу.
+ *
+ * Теперь обе величины приходят готовыми из семантического тиера
+ * (`--s-space-field`, `--s-space-grid`), где моды ширины объявлены один раз —
+ * `src/styles/portfolio-tokens.css`, раздел «Моды ширины». Компонентный слой
+ * о брейкпоинтах не знает вовсе; кегли, как и раньше, текут формулами.
  */
-
-@media (max-width: 1199px) {
-  :root {
-    --pa-field: 40px;
-    --pa-cell: 48px;
-  }
-}
-
-@media (max-width: 639px) {
-  :root {
-    --pa-field: 20px;
-    --pa-cell: 40px;
-  }
-}

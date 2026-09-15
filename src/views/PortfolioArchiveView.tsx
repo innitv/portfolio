@@ -4,7 +4,6 @@ import { motion } from "framer-motion"
 
 import { ArchiveSheet } from "@/components/portfolio/archive/archive-sheet"
 import { ArchiveStripe } from "@/components/portfolio/archive/archive-stripe"
-import { useRaceBoot } from "@/components/portfolio/archive/use-race-boot"
 import { DURATION, EASE, TIMING } from "@/components/portfolio/motion"
 
 import { archiveCompanies, type ArchiveCompany } from "./portfolio-archive.model"
@@ -52,9 +51,19 @@ const REVEAL_STAGGER = TIMING.revealStagger
 /** Длительность проявления одного блока, секунды. */
 const REVEAL_DURATION = DURATION.reveal
 
-/** Сдвиг блока при проявлении, px. */
-const REVEAL_OFFSET = 14
+/*
+ * Развёртка блока: закрыт — открыт. Сдвиг снизу (`y: 14`) и кривая входа
+ * сняты 14.09.2026 вместе с разнобоем направлений.
+ */
+const CLIP_SHUT = "inset(0 100% 0 0)"
+const CLIP_OPEN = "inset(0 0% 0 0)"
 
+/*
+ * Кривая прежняя. Линейная стояла здесь ради «ровной развёртки», но сдвинула
+ * темп проявления на 160 мс: проверки «текст встаёт одинаково с главной и с
+ * кейса» и «занавес идёт в темпе открытия» поймали разницу. Направление задаёт
+ * клип, а темп — эта кривая, и трогать его было незачем.
+ */
 const EASE_REVEAL = EASE.item
 
 /** Потолок ожидания гарнитур перед проявлением, мс. */
@@ -125,7 +134,6 @@ export function PortfolioArchiveView({
    * больше не идёт и запускается только прямым нажатием на шахматку. Подробно —
    * в шапке `archive-sheet.tsx`.
    */
-  const race = useRaceBoot()
 
   /*
    * Проявление содержимого больше НЕ ждёт заезда: с 2026-08-13 заезд — пасхалка
@@ -190,10 +198,22 @@ export function PortfolioArchiveView({
     onCloseCompany?.()
   }, [onCloseCompany, openId])
 
-  /** Проявление блока при заходе: индекс задаёт место в лесенке. */
+  /*
+    Проявление блока при заходе: индекс задаёт место в лесенке.
+
+    🔴 НАПРАВЛЕНИЕ У ВСЕГО ЭКРАНА ОДНО — СЛЕВА НАПРАВО. Правка владельца
+    14.09.2026: «засинхронь всю анимацию, а то одни появляются слева направо,
+    вторые снизу вверх».
+
+    До неё блоки выезжали снизу на 14 px с растворением, а полоса набиралась
+    квадратами слева направо: два разных жеста на одном экране. Теперь блок
+    открывается клипом от левого края — тем же движением, что фронт сборки
+    полосы и белая полоска над ней. Кривая линейная по той же причине: это
+    развёртка, а не выезд, и ускорение в ней читается как сбой темпа.
+  */
   const reveal = (index: number) => ({
-    animate: ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 0 },
-    initial: { opacity: 0, y: REVEAL_OFFSET },
+    animate: ready ? { clipPath: CLIP_OPEN, opacity: 1 } : { clipPath: CLIP_SHUT, opacity: 0 },
+    initial: { clipPath: CLIP_SHUT, opacity: 0 },
     transition: {
       delay: ready ? index * REVEAL_STAGGER : 0,
       duration: REVEAL_DURATION,
@@ -203,7 +223,6 @@ export function PortfolioArchiveView({
 
   return (
     <div className="pa-root" data-testid="pa-root">
-      <div aria-hidden="true" className="pa-grid" data-testid="pa-grid" />
 
       <div className="pa-screen">
         <motion.div className="pa-top" data-testid="pa-top" {...reveal(REVEAL_ORDER.top)}>
@@ -245,16 +264,19 @@ export function PortfolioArchiveView({
           </motion.div>
 
           <ArchiveStripe
+            /*
+              Слово курсивом — подпись, а не кнопка: заезд снят 14.09.2026
+              вместе с болидом, и запускать нечего.
+            */
             cursive={
-              <motion.span
+              <motion.div
                 className="pa-cursive"
                 data-testid="pa-cursive"
                 {...reveal(REVEAL_ORDER.cursive)}
               >
                 Archive
-              </motion.span>
+              </motion.div>
             }
-            race={race}
           />
         </div>
 

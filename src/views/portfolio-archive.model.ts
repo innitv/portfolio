@@ -43,14 +43,18 @@ export const WORDMARK: Record<CompanyId, string> = {
 /**
  * Порядок имён в ряду.
  *
- * Взят из макета, а не из порядка данных: длинное SAMOLET стоит посередине,
- * между двумя короткими, и ряд читается симметрично. В `portfolio.data.ts`
- * порядок другой (a3, rtk, smlt) — он определяет остальные страницы и здесь не
- * меняется.
+ * 🔴 Задаётся здесь, а не порядком данных: в `portfolio.data.ts` он свой
+ * (a3, rtk, smlt) и определяет остальные страницы.
+ *
+ * Сначала стояло `a3, smlt, rtk` — из макета, где длинное SAMOLET посередине
+ * между двумя короткими. Владелец 14.09.2026 поменял «Самолёт» и РТК местами:
+ * ряд идёт от свежей работы к давней, и симметрия длин этому уступила.
  */
-const ORDER: CompanyId[] = ["a3", "smlt", "rtk"]
+const ORDER: CompanyId[] = ["a3", "rtk", "smlt"]
 
 export interface ArchiveCase {
+  /** Работа сделана с AI: кейс попадает во вкладку «ai-работы». */
+  ai?: boolean
   caseId: string
   /** Римская нумерация из данных: I, II, III. */
   index: string
@@ -68,6 +72,8 @@ export interface ArchiveFact {
 
 export interface ArchiveCompany {
   cases: ArchiveCase[]
+  /** Список кейсов показывается вкладками «работы» и «ai-работы». */
+  caseTabs?: boolean
   facts: ArchiveFact[]
   id: CompanyId
   /** «B2B-платежи · 2025—н.в.» — отрасль и годы из данных. */
@@ -126,7 +132,9 @@ export const archiveCompanies: ArchiveCompany[] = ORDER.map((id) => {
   if (!company) throw new Error(`Компания ${id} отсутствует в portfolio.data.ts`)
 
   return {
+    caseTabs: company.caseTabs,
     cases: company.cases.map((study) => ({
+      ai: study.ai,
       caseId: study.id,
       index: study.index,
       impact: study.impact,

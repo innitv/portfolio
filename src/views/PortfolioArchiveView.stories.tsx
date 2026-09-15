@@ -37,13 +37,15 @@ export const Default: Story = {
     // который появится после загрузки.
     await expect(canvas.getByTestId("pa-stripe")).toBeVisible()
 
-    // Болид стоит на старте: заезда при заходе нет, он ждёт нажатия на флаг.
-    await expect(canvas.getByTestId("pa-car")).toBeInTheDocument()
-    await expect(canvas.getByTestId("pa-car-wrap")).toHaveAttribute("data-drive", "false")
-
-    // Кнопки «↻ заезд» больше нет — запуск только с шахматки.
+    // Заезд болида снят 14.09.2026: ни машины, ни приборов, ни запуска.
+    await expect(canvas.queryByTestId("pa-car")).toBeNull()
+    await expect(canvas.queryByTestId("pa-car-wrap")).toBeNull()
+    await expect(canvas.queryByTestId("pa-hud")).toBeNull()
     await expect(canvas.queryByTestId("pa-replay")).toBeNull()
-    await expect(canvas.getByTestId("pa-flag")).toBeVisible()
+    await expect(canvas.queryByTestId("pa-flag")).toBeNull()
+
+    // Слово снова подпись, а не кнопка.
+    await expect(canvas.getByTestId("pa-cursive").tagName).not.toBe("BUTTON")
 
     // Содержимое проявилось, не дожидаясь никакого заезда.
     await waitFor(
@@ -128,13 +130,13 @@ export const FitsWithinField: Story = {
       ).toBeLessThanOrEqual(0)
     }
 
-    // Курсив «Archive» не заезжает под шахматку: она кнопка, и перекрытый текст
-    // читался как «Archi_e» на 320 и на 721.
+    // Шахматки справа больше нет, но её ширина осталась полем: слово обязано
+    // кончаться левее правого края полосы, иначе курсив упрётся в край.
     const cursive = canvasElement.querySelector(".pa-cursive")
-    const flag = canvas.getByTestId("pa-flag")
+    const stripe = canvas.getByTestId("pa-stripe")
     if (cursive) {
-      const gap = Math.round(flag.getBoundingClientRect().left - textRight(cursive))
-      await expect(gap, `Зазор от «Archive» до шахматки ${gap} px`).toBeGreaterThan(0)
+      const tail = Math.round(stripe.getBoundingClientRect().right - textRight(cursive))
+      await expect(tail, `Поле справа от «Archive» ${tail} px`).toBeGreaterThan(0)
     }
   },
 }
@@ -165,8 +167,16 @@ export const CompanySheet: Story = {
     const sheet = await canvas.findByTestId("pa-sheet")
     await expect(sheet).toBeVisible()
 
-    // Три кейса А3 из данных сайта, а не вписанные в разметку.
-    await expect(canvasElement.querySelectorAll(".pa-case")).toHaveLength(3)
+    /*
+      Три кейса А3 из данных сайта, а не вписанные в разметку.
+
+      🔴 Считается ПОКАЗАННАЯ вкладка. Обе группы работ лежат в разметке
+      всегда — так список держит высоту при переключении, — и счёт по
+      голому `.pa-case` даёт строки обеих вкладок сразу.
+    */
+    await expect(
+      canvasElement.querySelectorAll('.pa-cases-layer[data-active="true"] .pa-case'),
+    ).toHaveLength(3)
 
     // Строка кейса ведёт на настоящую страницу кейса.
     await userEvent.click(canvas.getByTestId("pa-case-dashboard-redesign"))

@@ -1,0 +1,137 @@
+{
+  "$description": "Тиер 2 — семантика портфолио. Роли и намерения: что за поверхность, какой это текст, чем отбита граница, как идёт движение. Ссылается только на primitives.json. Компонентные значения (тиер 3) ссылаются только сюда.",
+  "surface": {
+    "page": { "$type": "color", "$value": "{color.ink.900}", "$description": "Поле главной и синего экрана: чернила." },
+    "page-quiet": { "$type": "color", "$value": "{color.paper.50}", "$description": "Поле страницы кейса — светлое, теплее бумаги." },
+    "accent": { "$type": "color", "$value": "{color.cobalt.600}", "$description": "Кобальтовая плоскость: экран компании, занавес, блок величин." },
+    "paper": { "$type": "color", "$value": "{color.paper.0}", "$description": "Белая плоскость поверх любого фона." },
+    "plate": { "$type": "color", "$value": "{color.alpha-ink.040}", "$description": "Подложка показа на светлом поле." },
+    "plate-on-ink": { "$type": "color", "$value": "{color.alpha-paper.160}", "$description": "Подложка на чернилах." }
+  },
+  "text": {
+    "default": { "$type": "color", "$value": "{color.ink.900}", "$description": "Основной текст на светлом." },
+    "on-ink": { "$type": "color", "$value": "{color.paper.0}", "$description": "Основной текст на чернилах и кобальте." },
+    "muted": { "$type": "color", "$value": "{color.alpha-paper.450}", "$description": "Второстепенный текст на тёмном." },
+    "quiet": { "$type": "color", "$value": "{color.grey.500}", "$description": "Приглушённая подпись на тёмном." },
+    "hover": { "$type": "color", "$value": "{color.sky.300}", "$description": "Отклик ссылки на наведение." }
+  },
+  "border": {
+    "default": { "$type": "color", "$value": "{color.alpha-ink.220}", "$description": "Линия раздела на светлом." },
+    "soft": { "$type": "color", "$value": "{color.alpha-ink.100}", "$description": "Тихая линия внутри блока." },
+    "on-ink": { "$type": "color", "$value": "{color.alpha-paper.120}", "$description": "Линия сетки-подложки на чернилах." },
+    "hair": { "$type": "dimension", "$value": "{line.hair}" },
+    "edge": { "$type": "dimension", "$value": "{line.edge}" }
+  },
+  "status": {
+    "danger": { "$type": "color", "$value": "{color.signal.red-500}", "$description": "Красный светофора: только пасхалка заезда." },
+    "go": { "$type": "color", "$value": "{color.signal.green-500}", "$description": "Зелёный светофора: только пасхалка заезда." }
+  },
+  "space": {
+    "inset-xs": { "$type": "dimension", "$value": "{space.2}", "$description": "Внутренний отступ мелкого элемента." },
+    "inset-sm": { "$type": "dimension", "$value": "{space.3}" },
+    "inset-md": { "$type": "dimension", "$value": "{space.4}" },
+    "inset-lg": { "$type": "dimension", "$value": "{space.6}" },
+    "stack-xs": { "$type": "dimension", "$value": "{space.2}", "$description": "Между строками внутри блока." },
+    "stack-sm": { "$type": "dimension", "$value": "{space.3}" },
+    "stack-md": { "$type": "dimension", "$value": "{space.6}", "$description": "От заголовка до текста." },
+    "stack-lg": { "$type": "dimension", "$value": "{space.8}" },
+    "block": { "$type": "dimension", "$value": "{space.18}", "$description": "Между блоками внутри раздела." },
+    "section": { "$type": "dimension", "$value": "{space.45}", "$description": "Между разделами страницы." },
+    "field": {
+      "$type": "dimension",
+      "$value": "{space.15}",
+      "$description": "Поле страницы. Значение зависит от ширины экрана — см. $extensions ниже: имя одно, меняется только величина.",
+      "$extensions": {
+        "portfolio.mode": {
+          "desktop": "{space.15}",
+          "tablet": "{space.10}",
+          "mobile": "{space.5}"
+        }
+      }
+    },
+    "grid": {
+      "$type": "dimension",
+      "$value": "{space.15}",
+      "$description": "Шаг фоновой сетки-подложки на чернилах. Крупнее поля не бывает: клетка задаёт ритм, в который встаёт поле.",
+      "$extensions": {
+        "portfolio.mode": {
+          "desktop": "{space.15}",
+          "tablet": "{space.12}",
+          "mobile": "{space.10}"
+        }
+      }
+    }
+  },
+  "type": {
+    "title": {
+      "$type": "typography",
+      "$value": { "fontFamily": "{font.sans}", "fontSize": "{size.title}", "lineHeight": "{leading.tight}" },
+      "$description": "Имя кейса и имя компании."
+    },
+    "part": {
+      "$type": "typography",
+      "$value": { "fontFamily": "{font.sans}", "fontSize": "{size.part}", "lineHeight": "{leading.head}" },
+      "$description": "Заголовок раздела."
+    },
+    "lead": {
+      "$type": "typography",
+      "$value": { "fontFamily": "{font.sans}", "fontSize": "{size.lead}", "lineHeight": "{leading.loose}" },
+      "$description": "Лид под именем кейса."
+    },
+    "body": {
+      "$type": "typography",
+      "$value": { "fontFamily": "{font.sans}", "fontSize": "{size.body}", "lineHeight": "{leading.loose}" },
+      "$description": "Текст рассказа."
+    },
+    "meta": {
+      "$type": "typography",
+      "$value": { "fontFamily": "{font.mono}", "fontSize": "{size.meta}", "letterSpacing": "{tracking.meta}" },
+      "$description": "Служебная строка: метки, номера, подписи."
+    },
+    "cursive": {
+      "$type": "typography",
+      "$value": { "fontFamily": "{font.serif}", "fontSize": "{size.title}", "lineHeight": "{leading.tight}" },
+      "$description": "Слово Archive и другие курсивные акценты."
+    }
+  },
+  "motion": {
+    "enter": {
+      "$type": "transition",
+      "$value": { "duration": "{duration.sheet}", "timingFunction": "{easing.in-sheet}" },
+      "$description": "Приход плоскости: экран компании, занавес."
+    },
+    "exit": {
+      "$type": "transition",
+      "$value": { "duration": "{duration.sheet}", "timingFunction": "{easing.out-sheet}" },
+      "$description": "Уход плоскости."
+    },
+    "curtain-out": {
+      "$type": "transition",
+      "$value": { "duration": "{duration.sheet}", "timingFunction": "{easing.curtain-out}" }
+    },
+    "item": {
+      "$type": "transition",
+      "$value": { "duration": "{duration.item}", "timingFunction": "{easing.item}" },
+      "$description": "Лесенка содержимого: строки экрана компании."
+    },
+    "reveal": {
+      "$type": "transition",
+      "$value": { "duration": "{duration.reveal}", "timingFunction": "{easing.item}" },
+      "$description": "Проявление содержимого главной."
+    },
+    "hover": {
+      "$type": "transition",
+      "$value": { "duration": "{duration.hover}", "timingFunction": "{easing.item}" }
+    }
+  },
+  "target": {
+    "touch": { "$type": "dimension", "$value": "{target.touch}", "$description": "Зона нажатия на тач-экране: даётся вылетом псевдоэлемента, вид элемента не меняется." }
+  },
+  "layer": {
+    "page": { "$type": "number", "$value": "{layer.base}" },
+    "raised": { "$type": "number", "$value": "{layer.raised}" },
+    "sticky": { "$type": "number", "$value": "{layer.sticky}" },
+    "sheet": { "$type": "number", "$value": "{layer.sheet}", "$description": "Синий экран компании поверх страницы." },
+    "curtain": { "$type": "number", "$value": "{layer.curtain}", "$description": "Занавес перехода — выше всего." }
+  }
+}

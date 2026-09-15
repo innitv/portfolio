@@ -1,0 +1,147 @@
+{
+  "$description": "Тиер 1 — примитивы портфолио. Сырые значения без контекста: палитра, шкалы пространства и кеглей, длительности, кривые, гарнитуры, толщины, слои. Ни один продуктовый стиль не ссылается сюда напрямую — только через semantic.json. Снято инвентаризацией 2026-09-13 из src/styles, значения не изменялись.",
+  "color": {
+    "ink": {
+      "900": { "$type": "color", "$value": "#0b0b0b", "$description": "Чернила — базовый тёмный портфолио." }
+    },
+    "paper": {
+      "0": { "$type": "color", "$value": "#ffffff", "$description": "Бумага: текст и плоскости на чернилах и кобальте." },
+      "50": { "$type": "color", "$value": "#fdfdfc", "$description": "Поле страницы кейса — теплее чистой бумаги." }
+    },
+    "cobalt": {
+      "600": { "$type": "color", "$value": "#044ab3", "$description": "Кобальт — синий экран компании и переходы." }
+    },
+    "grey": {
+      "500": { "$type": "color", "$value": "#8a8a8a", "$description": "Приглушённый серый на чернильном фоне." }
+    },
+    "sky": {
+      "300": { "$type": "color", "$value": "#9bb8e8", "$description": "Голубой отклика на наведение." }
+    },
+    "signal": {
+      "red-500": { "$type": "color", "$value": "#e11d2e", "$description": "Красный светофора заезда." },
+      "green-500": { "$type": "color", "$value": "#27c46b", "$description": "Зелёный светофора заезда." }
+    },
+    "alpha-paper": {
+      "850": { "$type": "color", "$value": "rgba(255, 255, 255, 0.85)" },
+      "800": { "$type": "color", "$value": "rgba(255, 255, 255, 0.8)" },
+      "550": { "$type": "color", "$value": "rgba(255, 255, 255, 0.55)" },
+      "450": { "$type": "color", "$value": "rgba(255, 255, 255, 0.45)" },
+      "300": { "$type": "color", "$value": "rgba(255, 255, 255, 0.3)" },
+      "160": { "$type": "color", "$value": "rgba(255, 255, 255, 0.16)" },
+      "120": { "$type": "color", "$value": "rgba(255, 255, 255, 0.12)" }
+    },
+    "alpha-ink": {
+      "220": { "$type": "color", "$value": "rgba(11, 11, 11, 0.22)" },
+      "100": { "$type": "color", "$value": "rgba(11, 11, 11, 0.1)" },
+      "040": { "$type": "color", "$value": "rgba(11, 11, 11, 0.04)" }
+    }
+  },
+  "space": {
+    "$description": "Шкала пространства, кратная четырём. Инвентаризация нашла шестнадцать значений отступов, шесть из них вне ряда (6, 9, 10, 13, 14, 18); 13.09.2026 они сведены к ступеням по правилу «ближайшая, при равенстве вверх». Кратность держит yarn tokens:check.",
+    "0": { "$type": "dimension", "$value": "0px" },
+    "1": { "$type": "dimension", "$value": "4px" },
+    "2": { "$type": "dimension", "$value": "8px" },
+    "3": { "$type": "dimension", "$value": "12px" },
+    "4": { "$type": "dimension", "$value": "16px" },
+    "5": { "$type": "dimension", "$value": "20px" },
+    "6": { "$type": "dimension", "$value": "24px" },
+    "8": { "$type": "dimension", "$value": "32px" },
+    "10": { "$type": "dimension", "$value": "40px" },
+    "12": { "$type": "dimension", "$value": "48px" },
+    "15": { "$type": "dimension", "$value": "60px" },
+    "18": { "$type": "dimension", "$value": "72px" },
+    "24": { "$type": "dimension", "$value": "96px" },
+    "30": { "$type": "dimension", "$value": "120px" },
+    "45": { "$type": "dimension", "$value": "180px" }
+  },
+  "breakpoint": {
+    "$description": "Точки перелома раскладки. Выбраны владельцем 14.09.2026 из пяти несогласованных границ, стоявших в CSS (599, 639, 899/900, 1024, 1199): mobile — телефон, tablet — планшет и узкий ноут, desktop — полная раскладка. Медиазапрос пишется числом (CSS-переменная внутри @media не работает), а кратность шкале держит yarn tokens:check.",
+    "mobile": { "$type": "dimension", "$value": "640px", "$description": "Ниже — одна колонка, поле 20, приёмы с горизонталью сняты." },
+    "tablet": { "$type": "dimension", "$value": "900px", "$description": "Ниже — нет бокового рельса и парных колонок; выше — раскладка с рельсом." },
+    "desktop": { "$type": "dimension", "$value": "1200px", "$description": "Ниже — поле 40 и имена компаний колонкой; выше — макетная раскладка рядом." }
+  },
+  "size": {
+    "$description": "Кегли, вынесенные из переменных поверхностей. Шкала кратна четырём (13.09.2026): рядом стояли 13 и 14, 15 и 16, 18 и 19 — различия, которых никто не закладывал. Плавающие величины остаются формулами на своём тиере, у них проверяются только границы clamp.",
+    "caption": { "$type": "dimension", "$value": "12px" },
+    "meta": { "$type": "dimension", "$value": "12px" },
+    "body": { "$type": "dimension", "$value": "16px" },
+    "lead": { "$type": "dimension", "$value": "20px" },
+    "sub": { "$type": "dimension", "$value": "24px" },
+    "part": { "$type": "dimension", "$value": "32px" },
+    "value": { "$type": "dimension", "$value": "44px" },
+    "title": { "$type": "dimension", "$value": "96px" }
+  },
+  "line": {
+    "$description": "Толщина линий и кромок.",
+    "hair": { "$type": "dimension", "$value": "1px" },
+    "edge": { "$type": "dimension", "$value": "2px" }
+  },
+  "target": {
+    "$description": "Минимальная зона нажатия. 44px — норма Apple HIG, выбор владельца 14.09.2026; 24px оставлен как нижний предел WCAG 2.2 SC 2.5.8 AA для справки. Вылет даётся псевдоэлементом только на тач-экранах: внешний вид не меняется.",
+    "touch": { "$type": "dimension", "$value": "44px" },
+    "min": { "$type": "dimension", "$value": "24px" }
+  },
+  "radius": {
+    "none": { "$type": "dimension", "$value": "0px" },
+    "sm": { "$type": "dimension", "$value": "4px" },
+    "md": { "$type": "dimension", "$value": "8px" },
+    "lg": { "$type": "dimension", "$value": "12px" },
+    "pill": { "$type": "dimension", "$value": "999px" },
+    "circle": { "$type": "dimension", "$value": "50%" }
+  },
+  "layer": {
+    "$description": "Слои по глубине. Значения сняты с пяти мест, где z-index стоял числом.",
+    "base": { "$type": "number", "$value": 0 },
+    "raised": { "$type": "number", "$value": 1 },
+    "sticky": { "$type": "number", "$value": 2 },
+    "sheet": { "$type": "number", "$value": 8 },
+    "curtain": { "$type": "number", "$value": 20 }
+  },
+  "duration": {
+    "hover": { "$type": "duration", "$value": "0.2s" },
+    "tick": { "$type": "duration", "$value": "0.3s" },
+    "flag": { "$type": "duration", "$value": "0.32s" },
+    "flag-slow": { "$type": "duration", "$value": "0.34s" },
+    "reveal": { "$type": "duration", "$value": "0.5s" },
+    "item": { "$type": "duration", "$value": "0.52s" },
+    "sheet": { "$type": "duration", "$value": "0.72s" },
+    "boot": { "$type": "duration", "$value": "0.9s", "$description": "Сборка полосы Archive из квадратов при заходе: столько же идёт лесенка содержимого главной." },
+    "race": { "$type": "duration", "$value": "4.5s" }
+  },
+  "delay": {
+    "items": { "$type": "duration", "$value": "0.38s" },
+    "stagger-items": { "$type": "duration", "$value": "0.06s" },
+    "stagger-reveal": { "$type": "duration", "$value": "0.07s" }
+  },
+  "easing": {
+    "in-sheet": { "$type": "cubicBezier", "$value": [0.4, 0, 0.15, 1] },
+    "out-sheet": { "$type": "cubicBezier", "$value": [0.33, 1, 0.68, 1] },
+    "curtain-out": { "$type": "cubicBezier", "$value": [0.4, 0.3, 0.3, 1] },
+    "item": { "$type": "cubicBezier", "$value": [0.16, 1, 0.3, 1] },
+    "race": { "$type": "cubicBezier", "$value": [0.3, 0.02, 0.2, 1] }
+  },
+  "font": {
+    "sans": {
+      "$type": "fontFamily",
+      "$value": ["Manrope Variable", "Manrope", "system-ui", "sans-serif"]
+    },
+    "mono": {
+      "$type": "fontFamily",
+      "$value": ["JetBrains Mono Variable", "JetBrains Mono", "ui-monospace", "monospace"]
+    },
+    "serif": {
+      "$type": "fontFamily",
+      "$value": ["Playfair Display Variable", "Playfair Display", "Georgia", "serif"]
+    }
+  },
+  "leading": {
+    "tight": { "$type": "number", "$value": 1.02 },
+    "head": { "$type": "number", "$value": 1.18 },
+    "snug": { "$type": "number", "$value": 1.25 },
+    "body": { "$type": "number", "$value": 1.375 },
+    "loose": { "$type": "number", "$value": 1.5 }
+  },
+  "tracking": {
+    "meta": { "$type": "dimension", "$value": "0.78px" }
+  }
+}

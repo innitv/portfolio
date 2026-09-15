@@ -57,6 +57,12 @@
   --pa-stripe-overlap: calc(var(--pa-word-size) * 0.138);
   --pa-stripe-edge: 2px;
   /*
+   * Развёртка содержимого слева направо: 0% — закрыто, 100% — открыто.
+   * Значение ведёт framer-motion; по умолчанию раскрыто, чтобы статичная
+   * разметка не зависела от движения.
+   */
+  --pa-wipe: 100%;
+  /*
    * Курсив на 6 % крупнее слова над ним (138 от 130) — но не крупнее, чем
    * позволяет место левее шахматки. Второй аргумент `min()` и есть это место:
    * ширина окна минус флаг, минус поле с отступом курсива (1.7 поля), минус
@@ -79,7 +85,7 @@
   --pa-cursive-left: calc(var(--pa-field) * 0.7);
   --pa-cursive-top: calc(var(--pa-cursive-size) * 0.13);
 
-  /* ─── Финишный флаг ────────────────────────────────────────────────────── */
+  /* ─── Поле справа от курсива ───────────────────────────────────────────── */
   /*
    * ─── КЛЕТКА ШАХМАТКИ СВОЯ, А НЕ КЛЕТКА СЕТКИ ─────────────────────────────
    * Раньше шахматка дробилась шагом `--pa-cell`, и на телефоне её квадраты
@@ -94,6 +100,12 @@
    * отклонил: число квадратов должно остаться прежним, это рисунок знака, а не
    * узор. На 1440 обе величины совпадают с макетом точно: 180 / 3 = 60,
    * 60 × 4 = 240.
+   */
+  /*
+   * 🔴 Шахматки на полосе больше нет, но её ширина осталась полем: кегль
+   * курсива считается от места ЛЕВЕЕ этой границы, и без вычитания слово
+   * подросло бы сразу на всех ширинах. Полоса уходит навылет вправо, поэтому
+   * поле читается как воздух, а не как пустое место.
    */
   --pa-flag-cell: calc(var(--pa-stripe-height) / 3);
   --pa-flag-width: calc(var(--pa-flag-cell) * 4);
@@ -120,12 +132,12 @@
    * число надо пересчитать. Ряд от этого не развалится молча: история витрины
    * `Ряд имён не выходит за поле` проверяет правый край на 1280 и 1440.
    */
-  --pa-name-size: clamp(40px, (var(--pa-inner) - 398px) / 6.8, 130px);
+  --pa-name-size: clamp(40px, (var(--pa-inner) - 398px) / 6.8, 132px);
   /* Разделитель между именами: 2px во всю высоту карточки, зазор с каждой
      стороны — доля кегля, а не константа. */
   --pa-sep-width: 2px;
   --pa-sep-gap: calc(var(--pa-name-size) * 0.55);
-  --pa-meta-gap: 9px;
+  --pa-meta-gap: var(--p-space-2);
 }
 
 /*
@@ -146,15 +158,25 @@ html[data-portfolio-surface="archive"] body {
  * не было вовсе — ни колесом, ни клавишей, ни скринридером.
  *
  * Поэтому запрет прокрутки теперь условный: он включается только там, где
- * содержимое заведомо помещается. 940 px — высота, при которой низ строки со
- * спецификацией (941 px в самой плотной раскладке) ещё внутри окна.
+ * содержимое заведомо помещается.
+ *
+ * 🔴 ПОРОГ ПОДНЯТ 14.09.2026, И ЭТО ИСПРАВЛЕНИЕ, А НЕ ПЕРЕНУМЕРАЦИЯ.
+ *
+ * Стояло `1024px и 940px`. Обе величины оказались занижены: ниже 1200 имена
+ * компаний идут не рядом, а колонкой, и содержимое занимает 1297 px. На
+ * 1024 × 940 замер показал `overflow: hidden` при содержимом 1297 — SAMOLET
+ * был обрезан посередине, RTK не виден вовсе, и доскроллить было нельзя. То
+ * же на 1440 × 940: требуется 1000.
+ *
+ * Теперь ширина берётся из шкалы (`--p-bp-desktop`, ниже неё раскладка
+ * другая), а высота — из замера самой плотной раскладки ряда, 1000 px.
  */
 html[data-portfolio-surface="archive"],
 html[data-portfolio-surface="archive"] body {
   overflow: auto;
 }
 
-@media (min-width: 1024px) and (min-height: 940px) {
+@media (min-width: 1200px) and (min-height: 1000px) {
   html[data-portfolio-surface="archive"],
   html[data-portfolio-surface="archive"] body {
     overflow: hidden;
@@ -169,23 +191,12 @@ html[data-portfolio-surface="archive"] body {
   font-family: var(--pa-sans);
 }
 
-/* ─── Сетка-подложка ───────────────────────────────────────────────────────
- * Отсчёт идёт НЕ от края окна, а от поля контейнера: тогда первая линия
- * совпадает с полем, а клетка остаётся квадратной. Привязка по колонкам
- * карточек давала прямоугольник 453×88 — шаг по осям расходился.
+/* ─── СЕТКИ-ПОДЛОЖКИ БОЛЬШЕ НЕТ ────────────────────────────────────────────
+ * Снята 14.09.2026 по решению владельца вместе с заменой заливки полосы на
+ * живой растр: две клетки на одном экране — фоновая и растровая — читались как
+ * рябь. Шаг клетки (`--pa-cell`) остаётся: от него считается вертикальный ритм
+ * главной, а не только рисунок подложки.
  */
-.pa-grid {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(90deg, var(--pa-line) 1px, transparent 1px),
-    linear-gradient(var(--pa-line) 1px, transparent 1px);
-  background-size: var(--pa-cell) var(--pa-cell);
-  background-position: var(--pa-field) var(--pa-field);
-  opacity: var(--pa-grid-opacity);
-}
 
 /* ─── Экран ────────────────────────────────────────────────────────────────── */
 
@@ -237,9 +248,9 @@ html[data-portfolio-surface="archive"] body {
 .pa-home::after {
   content: "";
   position: absolute;
-  inset-inline: -8px;
-  inset-block: -14px;
-  min-block-size: 44px;
+  inset-inline: calc(var(--p-space-2) * -1);
+  inset-block: calc(var(--p-space-4) * -1);
+  min-block-size: var(--s-target-touch);
 }
 
 /*
@@ -287,9 +298,9 @@ html[data-portfolio-surface="archive"] body {
 .pa-contact::after {
   content: "";
   position: absolute;
-  inset-inline: -6px;
-  inset-block: -14px;
-  min-block-size: 44px;
+  inset-inline: calc(var(--p-space-2) * -1);
+  inset-block: calc(var(--p-space-4) * -1);
+  min-block-size: var(--s-target-touch);
 }
 
 .pa-home:focus-visible {
@@ -322,17 +333,109 @@ html[data-portfolio-surface="archive"] body {
 .pa-stripe {
   position: relative;
   z-index: 1;
-  background-color: var(--pa-cobalt);
+  /*
+   * 🔴 Свой слой смешивания. Слово «Archive» вырезано в ленте
+   * (`mix-blend-mode: destination-out`), и без изоляции вырез прошёл бы
+   * насквозь — вместе с чернильным полем страницы под полосой.
+   */
+  isolation: isolate;
+  /*
+   * 🔴 Заливки нет: ленту рисуют сами квадраты растра, и при заходе она
+   * собирается из них. Кобальт стоял здесь фоном, и на нём сборка читалась
+   * как подсветка уже готовой полосы, а не как появление.
+   */
   block-size: var(--pa-stripe-height);
   margin-block-start: calc(-1 * var(--pa-stripe-overlap));
   margin-inline-end: calc(-1 * var(--pa-field));
-  border-block-start: var(--pa-stripe-edge) solid var(--pa-paper);
+  /*
+   * Кромка — не бордюр, а отдельная полоска: она набирается слева направо,
+   * как индикатор загрузки, пока под ней собираются квадраты. Бордюром это
+   * не сделать — он появляется целиком.
+   */
 }
 
+/*
+ * Полотно ткани. Кобальт под ним остаётся: пока шейдер не скомпилировался (или
+ * если WebGL в системе выключен), полоса выглядит ровно как прежде — заливкой.
+ */
+/*
+ * ─── РАЗВЁРТКА СОДЕРЖИМОГО СЛЕВА НАПРАВО ───────────────────────────────────
+ * Строки синего экрана открываются той же стороной, что набирается полоса на
+ * главной. Значение ведёт framer-motion через переменную `--pa-wipe`; без неё
+ * маска раскрыта целиком, поэтому статичная разметка (витрина, печать) не
+ * зависит от движения.
+ */
+[style*="--pa-wipe"] {
+  /* Цвет в маске роли не играет — читается только альфа; берём бумагу. */
+  mask-image: linear-gradient(
+    90deg,
+    var(--pa-paper) var(--pa-wipe),
+    transparent var(--pa-wipe)
+  );
+}
+
+/*
+ * ─── КРОМКА КАК ПРОГРЕСС ЗАГРУЗКИ ──────────────────────────────────────────
+ * Правка владельца 14.09.2026: «полоска над синей линией появлялась слева
+ * направо, как прогресс загрузки пикселей». Она идёт ровно, без рывков, а
+ * квадраты под ней набираются по её фронту — с рваным краем от хеша клетки.
+ */
+.pa-stripe::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  block-size: var(--pa-stripe-edge);
+  background-color: var(--pa-paper);
+  /*
+   * 🔴 Кромка ВЫШЕ полотна и остаётся видимой. Псевдоэлемент стоит в дереве
+   * раньше полотна, и без слоя растр накрывал её собой: белая линия уходила
+   * под первый же ряд квадратов.
+   */
+  z-index: var(--s-layer-raised);
+  /*
+   * Анимация стоит на паузе, пока полотно не сообщит о начале сборки: обе
+   * линии — белая и фронт квадратов — обязаны тронуться одним кадром.
+   */
+  animation: pa-stripe-edge var(--pa-dur-boot) linear both paused;
+}
+
+.pa-stripe[data-boot="on"]::before {
+  animation-play-state: running;
+}
+
+@keyframes pa-stripe-edge {
+  from {
+    inline-size: 0;
+  }
+  to {
+    inline-size: 100%;
+  }
+}
+
+.pa-silk {
+  position: absolute;
+  inset: 0;
+  z-index: var(--s-layer-page);
+  inline-size: 100%;
+  block-size: 100%;
+  pointer-events: none;
+}
+
+/*
+ * Курсив — кнопка заезда (шахматка снята 2026-09-10), поэтому здесь же сброс
+ * кнопочных умолчаний: слово должно остаться словом, а не выглядеть элементом
+ * управления.
+ */
 .pa-cursive {
   position: absolute;
   inset-inline-start: var(--pa-cursive-left);
   inset-block-start: var(--pa-cursive-top);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pa-paper);
+  cursor: pointer;
   font-family: var(--pa-serif);
   font-style: italic;
   font-weight: 400;
@@ -340,31 +443,11 @@ html[data-portfolio-surface="archive"] body {
   line-height: var(--pa-word-leading);
 }
 
-/*
- * Шахматка: клетка 60, белые ячейки там, где сумма номеров колонки и ряда
- * чётная. `conic-gradient` плиткой 120×120 даёт ровно этот рисунок, сдвиг на
- * клетку выставляет фазу как в макете.
- */
-.pa-flag {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: 0;
-  inline-size: var(--pa-flag-width);
-  block-size: var(--pa-stripe-height);
-  padding: 0;
-  border: 0;
-  cursor: pointer;
-  background-color: transparent;
-  background-image: conic-gradient(var(--pa-paper) 0 25%, transparent 0 50%, var(--pa-paper) 0 75%, transparent 0);
-  background-size: calc(var(--pa-flag-cell) * 2) calc(var(--pa-flag-cell) * 2);
-  background-position: var(--pa-flag-cell) 0;
-}
-
-/* Флаг — кнопка (пускает заезд), и с клавиатуры до неё доходят. Кольцо внутрь:
-   снаружи оно ушло бы за край окна, полоса стоит навылет. */
-.pa-flag:focus-visible {
+/* Кольцо фокуса у слова-кнопки: полоса стоит навылет, поэтому наружу оно не
+   уходит дальше поля. */
+.pa-cursive:focus-visible {
   outline: 2px solid var(--pa-paper);
-  outline-offset: -6px;
+  outline-offset: 4px;
 }
 
 /* ─── Работы ───────────────────────────────────────────────────────────────── */
@@ -561,7 +644,7 @@ html[data-portfolio-surface="archive"] body {
    */
   display: block;
   inline-size: fit-content;
-  padding: 0 10px 0 0;
+  padding: 0 var(--p-space-3) 0 0;
   border: 0;
   background: none;
   cursor: pointer;
@@ -587,9 +670,9 @@ html[data-portfolio-surface="archive"] body {
 .pa-back::after {
   content: "";
   position: absolute;
-  inset-inline: -10px;
-  inset-block: -13px;
-  min-block-size: 44px;
+  inset-inline: calc(var(--p-space-3) * -1);
+  inset-block: calc(var(--p-space-3) * -1);
+  min-block-size: var(--s-target-touch);
 }
 
 .pa-back:focus-visible {
@@ -611,17 +694,17 @@ html[data-portfolio-surface="archive"] body {
  * слову упереться в край.
  */
 .pa-huge {
-  font-size: clamp(40px, var(--pa-inner) / 4.6, 215px);
+  font-size: clamp(40px, var(--pa-inner) / 4.6, 216px);
   line-height: 0.9;
   letter-spacing: -0.03em;
   text-transform: uppercase;
-  margin-block-start: 18px;
+  margin-block-start: var(--p-space-5);
 }
 
 .pa-sub {
-  margin-block-start: 14px;
+  margin-block-start: var(--p-space-4);
   font-family: var(--pa-mono);
-  font-size: clamp(12px, 1.1vw, 14px);
+  font-size: clamp(12px, 1.1vw, 16px);
   letter-spacing: 0.06em;
   opacity: 0.85;
 }
@@ -649,7 +732,7 @@ html[data-portfolio-surface="archive"] body {
   gap: clamp(12px, 2vw, 26px);
   inline-size: 100%;
   min-block-size: 56px;
-  padding: 18px var(--pa-field);
+  padding: var(--p-space-5) var(--pa-field);
   border: 0;
   border-block-end: 1px solid var(--pa-paper-a30);
   background: transparent;
@@ -741,94 +824,15 @@ html[data-portfolio-surface="archive"] body {
   max-inline-size: 24ch;
 }
 
-/* ─── Заезд — пасхалка на финишном флаге ───────────────────────────────────
- * Отдельной трассы нет: болид едет по той самой полосе Archive, что стоит на
- * странице. Содержимое при этом остаётся на месте — заезд идёт поверх готовой
- * страницы и ничего не заслоняет.
+/* ─── ЗАЕЗДА БОЛИДА БОЛЬШЕ НЕТ ────────────────────────────────────────────
+ * Снят 14.09.2026 по решению владельца: «убери машинку». Вместе с болидом
+ * ушли приборная строка с процентами, светофор перед стартом и запуск
+ * нажатием на слово; `pixel-car.tsx` и `use-race-boot.ts` удалены.
  *
- * Кнопки «↻ заезд» здесь БОЛЬШЕ НЕТ (2026-08-13). Она стояла `position: fixed`
- * в правом нижнем углу и на десктопе перекрывала мету RTK, а на мобильной
- * ширине — сами имена. Запуск остался один — нажатие на шахматку.
+ * Здесь стояли `.pa-car-wrap`, `.pa-hud`, `.pa-lights`, `.pa-lamp`,
+ * `.pa-count` и кадры движения. Полоса осталась полосой: заливка — живой
+ * растр, поверх слово курсивом.
  */
-
-.pa-hud {
-  position: absolute;
-  inset-inline-start: 0;
-  inset-block-start: calc(100% + 18px);
-  display: flex;
-  gap: 16px;
-  font-family: var(--pa-mono);
-  font-size: 12px;
-  letter-spacing: var(--pa-meta-tracking);
-  color: var(--pa-mute);
-  opacity: 0;
-  transition: opacity var(--pa-dur-tick);
-}
-
-.pa-hud[data-on="true"] {
-  opacity: 1;
-}
-
-.pa-lights {
-  display: flex;
-  gap: 8px;
-}
-
-.pa-lamp {
-  display: block;
-  inline-size: 12px;
-  block-size: 12px;
-  background-color: var(--pa-paper-a16);
-}
-
-.pa-lamp[data-state="on"] {
-  background-color: var(--pa-race-red);
-}
-
-.pa-lamp[data-state="go"] {
-  background-color: var(--pa-race-green);
-}
-
-.pa-count {
-  font-variant-numeric: tabular-nums;
-}
-
-/*
- * ─── ПРОЕЗД — ИМЕННО CSS-АНИМАЦИЯ ──────────────────────────────────────────
- * Обёртка едет по полосе `transform: translateX`, спрайт внутри только
- * масштабируется. Анимацию ведёт CSS, а не библиотека: в прототипе попытка
- * анимировать свойство `left` схлопывала проезд в прыжок. Финиш ловится
- * событием `animationend` этой же анимации, поэтому её имя и длительность —
- * часть контракта с кодом (`use-race-boot.ts`).
- */
-.pa-car-wrap {
-  position: absolute;
-  inset-block-end: 14px;
-  inset-inline-start: 0;
-  z-index: 2;
-  inline-size: 6px;
-  block-size: 6px;
-  transform: translateX(-260px);
-  will-change: transform;
-  opacity: 0;
-}
-
-.pa-car-wrap[data-on="true"] {
-  opacity: 1;
-}
-
-.pa-car-wrap[data-drive="true"] {
-  animation: pa-drive var(--pa-dur-race) var(--pa-ease-race) forwards;
-}
-
-@keyframes pa-drive {
-  from {
-    transform: translateX(-260px);
-  }
-  to {
-    transform: translateX(var(--pa-race-distance));
-  }
-}
 
 /* ─── ТРИ ДИАПАЗОНА КАРКАСА ────────────────────────────────────────────────
  * Кегли считаются формулами и меняются плавно, поэтому брейкпоинты остались
@@ -854,7 +858,7 @@ html[data-portfolio-surface="archive"] body {
        ограничение задаёт самое длинное имя (SAMOLET, 4.46 кегля), а не сумма
        трёх. Делитель 4.6 — тот же запас, что у имени на синем экране: без него
        слово встаёт ровно в поле и на 640 вылезало за него на 2 px. */
-    --pa-name-size: clamp(48px, var(--pa-inner) / 4.6, 130px);
+    --pa-name-size: clamp(48px, var(--pa-inner) / 4.6, 132px);
   }
 
   .pa-row {
@@ -897,3 +901,116 @@ html[data-portfolio-surface="archive"] body {
  * движение, достаточно было убрать локальный блок, а сам guardrail остался
  * нетронутым и продолжает работать на остальном сайте.
  */
+
+/*
+ * ─── ВКЛАДКИ СПИСКА РАБОТ ──────────────────────────────────────────────────
+ *
+ * Правка владельца 2026-08-27: разделить обычные работы и сделанные с AI.
+ * Стоят над списком кейсов и включаются признаком у компании — на А3.
+ *
+ * Голос служебный, как у «← все работы»: моноширинная, строчными, тот же кегль
+ * и трекинг. Неактивная вкладка приглушена ЦВЕТОМ, а не прозрачностью —
+ * прозрачность на этом экране занята появлением лесенкой, и инлайн анимации
+ * перебил бы её.
+ */
+.pa-tabs {
+  display: flex;
+  gap: 24px;
+  margin-block-end: var(--p-space-5);
+}
+
+.pa-tab {
+  position: relative;
+  padding: 0 0 8px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-top-leading);
+  letter-spacing: 0.06em;
+  color: var(--pa-mute);
+  transition: color var(--pa-dur-hover) var(--pa-ease-out-sheet);
+}
+
+/* Тач-цель 44 px при строке в 16: сама вкладка — часть рисунка шапки. */
+.pa-tab::before {
+  content: "";
+  position: absolute;
+  inset-inline: -8px;
+  inset-block: calc(var(--p-space-4) * -1) calc(var(--p-space-2) * -1);
+  min-block-size: var(--s-target-touch);
+}
+
+.pa-tab[data-active="true"] {
+  color: var(--pa-paper);
+}
+
+/*
+ * Активную держит линия под словом, а не заливка: экран набран плоскостями без
+ * рамок, и подложка под вкладкой читалась бы четвёртой кнопкой.
+ */
+.pa-tab[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 1px;
+  background-color: var(--pa-paper);
+}
+
+.pa-tab:focus-visible {
+  outline: 2px solid var(--pa-paper);
+  outline-offset: 4px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pa-tab:hover {
+    color: var(--pa-paper);
+  }
+}
+
+/* Пустая вкладка: строка стоит на месте первой работы, тем же голосом. */
+.pa-cases-empty {
+  margin: 0;
+  padding: 20px var(--pa-field);
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  letter-spacing: 0.06em;
+  color: var(--pa-mute);
+}
+
+/* Вкладки и список работ идут одним блоком: раскладка листа распределяет
+   детей по высоте, и отдельной строкой вкладки отрывались от первой работы. */
+.pa-cases-block {
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * Список работ держит высоту самой длинной вкладки.
+ *
+ * Правка владельца 2026-08-27: «контейнер такой же пускай будет по величине у
+ * таба ai-работы». Число строк приходит из компонента — вкладки бывают разной
+ * длины, — а 56 px это `min-block-size` строки. Список длиннее расчёта просто
+ * растёт: минимум держит нижнюю границу, а не задаёт её.
+ */
+/*
+ * ─── ВКЛАДКИ ЛЕЖАТ В ОДНОЙ ЯЧЕЙКЕ ────────────────────────────────────────
+ * Обе группы работ рендерятся всегда и занимают одну клетку сетки, поэтому
+ * высоту списка задаёт та вкладка, что выше, и переключение не двигает низ
+ * экрана. Прежние подходы считали высоту числом строк (56 px за строку) и
+ * добирали её пустыми рядами — оба врали, как только название переносилось на
+ * две строки: на 390 разница доходила до 30 px.
+ */
+.pa-cases {
+  display: grid;
+}
+
+.pa-cases-layer {
+  grid-area: 1 / 1;
+}
+
+.pa-cases-layer[data-active="false"] {
+  visibility: hidden;
+}

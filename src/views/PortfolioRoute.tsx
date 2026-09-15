@@ -334,6 +334,34 @@ export function PortfolioRoute() {
   )
 
   React.useEffect(() => {
+    /*
+     * 🔴 ПРОКРУТКОЙ РАСПОРЯЖАЕМСЯ МЫ, А НЕ БРАУЗЕР.
+     *
+     * По умолчанию `scrollRestoration` = `auto`, и на `popstate` браузер сам
+     * возвращает прокрутку сохранённой записи. Получалось два рывка на одной
+     * дороге, и оба только на кнопке «назад» (замер 2026-09-10, возврат с кейса
+     * с высоты 2000 px):
+     *
+     *   1. в тот же кадр, что и нажатие, страница кейса прыгала к позиции
+     *      записи — на глазах, пока плоскость только пошла вниз;
+     *   2. в конце движения `setScreenNow` доводил её до нуля своим
+     *      `scrollTo` — 85 → 0 ровно на кадре, где плоскость доехала.
+     *
+     * Владелец: «шторка в конце как-то резко встаёт на место, а если просто
+     * зайти на страницу кейсов, то всё норм». Нажатием этого не видно потому,
+     * что кнопка «← кейсы» живёт в шапке: чтобы её нажать, человек уже наверху.
+     *
+     * `manual` снимает второй механизм: страница едет туда, куда её ведёт
+     * `setScreenNow`, и делает это под уже закрытой плоскостью.
+     */
+    const previous = window.history.scrollRestoration
+    window.history.scrollRestoration = "manual"
+    return () => {
+      window.history.scrollRestoration = previous
+    }
+  }, [])
+
+  React.useEffect(() => {
     const onPopState = () => navigate(readAndCanonicalize())
     window.addEventListener("popstate", onPopState)
     return () => window.removeEventListener("popstate", onPopState)

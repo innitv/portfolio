@@ -6,6 +6,34 @@ import { DURATION, EASE, TIMING } from "@/components/portfolio/motion"
 
 import type { ArchiveCompany } from "@/views/portfolio-archive.model"
 
+/*
+ * Вкладки списка кейсов. Две и жёстко: владелец 2026-08-27 просил разделить
+ * обычные работы и сделанные с AI, а не завести произвольные разделы.
+ *
+ * Подписи строчными и моноширинной — как «← все работы» и строка отрасли на
+ * этом же экране: вкладки служебные, и в один голос с именем компании они бы
+ * спорили.
+ */
+type TabId = "all" | "ai"
+
+/*
+ * Нумерация строк СЧИТАЕТСЯ ПО МЕСТУ В СПИСКЕ, а не берётся из данных кейса.
+ *
+ * Владелец 2026-08-27: «нумерация кейсов в табе AI тоже начинается с единицы».
+ * В данных номер сквозной по компании (у первых работ А3 это I-III, у AI-работ
+ * IV-VI) — он принадлежит порядку кейсов компании, а не показанному списку.
+ * Внутри вкладки счёт свой: человек видит три работы и ждёт I, II, III.
+ *
+ * Запас на шесть строк: у компании их сейчас максимум три на вкладку, а дальше
+ * подставляется номер из данных — лучше сквозной, чем пустое место.
+ */
+const ROMAN = ["I", "II", "III", "IV", "V", "VI"]
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: "all", label: "работы" },
+  { id: "ai", label: "ai-работы" },
+]
+
 /**
  * Синий экран компании.
  *
@@ -65,8 +93,21 @@ const ITEMS_STAGGER = TIMING.itemsStagger
 /** Длительность появления элемента, секунды. */
 const ITEM_DURATION = DURATION.item
 
-/** Сдвиг элемента при появлении, px. */
-const ITEM_OFFSET = 20
+/*
+ * Развёртка строки: закрыта — открыта.
+ *
+ * 🔴 НАПРАВЛЕНИЕ ОДНО НА ВЕСЬ САЙТ — СЛЕВА НАПРАВО. Сдвиг снизу (`y: 20`) снят
+ * 14.09.2026: главная набирается квадратами слева направо, и строки синего
+ * экрана, выезжавшие снизу, читались вторым жестом на том же экране.
+ *
+ * 🔴 РАЗВЁРТКА ИДЁТ МАСКОЙ, А НЕ `clip-path`, И ЭТО НЕ ВЫБОР ВКУСА. Клип у
+ * содержимого уже занят: им лист обрезает строки по кромке плоскости на уходе
+ * (`CONTENT_EXIT`), и вторая роль на том же свойстве ломала обе — проверки
+ * «содержимое не переживает кромку плоскости» и «не появляется раньше
+ * плоскости» упали разом. Маска свободна и складывается с клипом.
+ */
+const WIPE_SHUT = "0%"
+const WIPE_OPEN = "100%"
 
 const EASE_IN_SHEET = EASE.inSheet
 /**
@@ -199,14 +240,109 @@ export function ArchiveSheet({
     `revealed` — единственное исключение: лист под уходящим занавесом уже
     отыграл своё и стоит готовым.
   */
-  const item = (index: number, shift = true) => {
-    if (revealed) return { animate: { opacity: 1, y: 0 }, initial: { opacity: 1, y: 0 } }
+  /*
+    Активная вкладка списка кейсов. Сбрасывается на «работы» при смене
+    компании: у следующей свой состав, и открывать её на пустой вкладке
+    предыдущей нельзя.
+  */
+  const [tab, setTab] = React.useState<TabId>("all")
+  /*
+    Переключение вкладки — самостоятельное движение, не часть входа листа.
+
+    Владелец 2026-08-27: «нужен более плавный переход между табами, допустим
+    чтобы кейсы внутри появлялись так же, как простые работы». Лесенка та же,
+    но БЕЗ паузы `ITEMS_DELAY`: та пауза ждёт, пока доедет плоскость экрана, а
+    при смене вкладки плоскость уже стоит — и полсекунды пустоты читались бы
+    зависанием.
+  */
+  const [switching, setSwitching] = React.useState(false)
+
+  React.useEffect(() => {
+    setTab("all")
+    setSwitching(false)
+  }, [company?.id])
+
+  const openTab = (next: TabId) => {
+    if (next === tab) return
+    setSwitching(true)
+    setTab(next)
+  }
+
+  const caseGroups = React.useMemo(() => {
+    const all = company?.cases ?? []
+    if (!company?.caseTabs) return { ai: [], all }
+    return {
+      ai: all.filter((study) => study.ai),
+      all: all.filter((study) => !study.ai),
+    }
+  }, [company?.caseTabs, company?.cases])
+
+  const shownCases = tab === "ai" ? caseGroups.ai : caseGroups.all
+
+  /*
+    Высота списка держится по САМОЙ ДЛИННОЙ вкладке, а не по показанной.
+    Владелец: «контейнер такой же пускай будет по величине у таба ai-работы».
+    Иначе при переключении низ экрана — величины компании — прыгает вверх.
+
+    🔴 Недостающие строки добираются ЗАПОЛНИТЕЛЯМИ, а не формулой высоты.
+    Прежняя редакция ставила `min-block-size: строки × 56px`, где 56 — тач-цель
+    строки, а не её рост: заголовок набран `clamp(20px, 2.3vw, 32px)`, и на 1440
+    строка занимает 76. Список работ выходил 229 px против расчётных 168, и при
+    переключении вкладки величины компании прыгали вверх на 61 px.
+  */
+  /*
+    Слои списка: при вкладках рендерятся обе группы, при их отсутствии — одна.
+    Порядок фиксирован, чтобы ключи не переезжали между перерисовками.
+  */
+  const caseLayers = company?.caseTabs
+    ? ([
+        { id: "all", cases: caseGroups.all },
+        { id: "ai", cases: caseGroups.ai },
+      ] as const)
+    : ([{ id: "all", cases: caseGroups.all }] as const)
+
+  /*
+    Появление строки кейса. При входе листа — общая лесенка (кейсы идут третьими
+    после шапки и вкладок), при переключении вкладки — та же лесенка, но сразу:
+    ждать нечего, плоскость уже на месте.
+  */
+  const caseItem = (index: number) => {
+    if (!switching) return item(3 + index)
 
     return {
-      animate: { opacity: 1, y: 0 },
-      initial: { opacity: 0, y: shift ? ITEM_OFFSET : 0 },
+      animate: { opacity: 1, ["--pa-wipe" as string]: WIPE_OPEN },
+      initial: { opacity: 0, ["--pa-wipe" as string]: WIPE_SHUT },
+      style: { ["--pa-wipe" as string]: WIPE_SHUT },
       transition: {
-        delay: (instant ? 0 : ITEMS_DELAY) + index * ITEMS_STAGGER,
+        delay: index * ITEMS_STAGGER,
+        duration: ITEM_DURATION,
+        ease: EASE_ITEM,
+      },
+    }
+  }
+
+  const item = (index: number, shift = true) => {
+    if (revealed) {
+      return {
+        animate: { opacity: 1, ["--pa-wipe" as string]: WIPE_OPEN },
+        initial: { opacity: 1, ["--pa-wipe" as string]: WIPE_OPEN },
+      }
+    }
+
+    const delay = (instant ? 0 : ITEMS_DELAY) + index * ITEMS_STAGGER
+
+    return {
+      /*
+       * 🔴 Непрозрачность стартует с нуля У ВСЕХ строк, даже у тех, что идут
+       * без развёртки. Первый заход давал таким строкам `opacity: 1` сразу, и
+       * проверка «содержимое не появляется раньше плоскости» поймала кнопку
+       * возврата: она была видна ещё до того, как лист приехал.
+       */
+      animate: { opacity: 1, ["--pa-wipe" as string]: WIPE_OPEN },
+      initial: { opacity: 0, ["--pa-wipe" as string]: shift ? WIPE_SHUT : WIPE_OPEN },
+      style: { ["--pa-wipe" as string]: shift ? WIPE_SHUT : WIPE_OPEN },
+      transition: {
+        delay,
         duration: ITEM_DURATION,
         ease: EASE_ITEM,
       },
@@ -307,21 +443,105 @@ export function ArchiveSheet({
             </motion.div>
           </div>
 
-          <div className="pa-cases">
-            {company.cases.map((study, index) => (
-              <motion.button
-                className="pa-case"
-                data-testid={`pa-case-${study.caseId}`}
-                key={study.caseId}
-                onClick={() => onOpenCase?.(company.id, study.caseId)}
-                type="button"
-                {...item(2 + index)}
-              >
-                <span className="pa-case-index">{study.index}</span>
-                <span className="pa-case-title">{study.title}</span>
-                <span className="pa-case-impact">{study.impact}</span>
-              </motion.button>
-            ))}
+          {/*
+            ─── ВКЛАДКИ «РАБОТЫ» И «AI-РАБОТЫ» ─────────────────────────────
+            Правка владельца 2026-08-27. Стоят только там, где компания их
+            включила (`caseTabs`): просили их на А3, и у остальных экран
+            остаётся прежним.
+
+            Разметка — роли `tablist`/`tab`, а не просто кнопки: список под
+            ними меняется целиком, и без ролей человек с экранным диктором
+            не узнает, что переключил содержимое, а не открыл новый экран.
+          */}
+          {/*
+            Вкладки и список — ОДИН блок в раскладке листа: `.pa-sheet-inner`
+            распределяет детей `space-between`, и отдельной строкой вкладки
+            получали свою долю пустоты — 175 px между ними и первой работой.
+          */}
+          <div className="pa-cases-block">
+          {company.caseTabs ? (
+            <motion.div
+              aria-label="Разделы работ"
+              className="pa-tabs"
+              data-testid="pa-tabs"
+              role="tablist"
+              {...item(2, false)}
+            >
+              {TABS.map((entry) => (
+                <button
+                  aria-selected={tab === entry.id}
+                  className="pa-tab"
+                  data-active={tab === entry.id}
+                  data-testid={`pa-tab-${entry.id}`}
+                  key={entry.id}
+                  onClick={() => openTab(entry.id)}
+                  role="tab"
+                  type="button"
+                >
+                  {entry.label}
+                </button>
+              ))}
+            </motion.div>
+          ) : null}
+
+          <div
+            className="pa-cases"
+            data-testid="pa-cases"
+            role={company.caseTabs ? "tabpanel" : undefined}
+          >
+            {caseLayers.map((layer) => {
+              const active = layer.id === tab
+
+              return (
+                <div
+                  /*
+                    Неактивная вкладка остаётся в разметке и держит высоту, но из
+                    чтения, наведения и табуляции выключена: `visibility` снимает
+                    её и для диктора, и для мыши, и для клавиатуры.
+                  */
+                  aria-hidden={active ? undefined : true}
+                  className="pa-cases-layer"
+                  data-active={active}
+                  key={layer.id}
+                >
+                  {layer.cases.map((study, index) => (
+                    <motion.button
+                      className="pa-case"
+                      data-testid={`pa-case-${study.caseId}`}
+                      /*
+                        Ключ с вкладкой: без него framer-motion считает строки
+                        одним и тем же узлом и просто подменяет в них текст —
+                        лесенка при переключении не проигрывается вовсе.
+                      */
+                      key={`${tab}-${study.caseId}`}
+                      onClick={() => onOpenCase?.(company.id, study.caseId)}
+                      tabIndex={active ? undefined : -1}
+                      type="button"
+                      {...(active ? caseItem(index) : {})}
+                    >
+                      <span className="pa-case-index">{ROMAN[index] ?? study.index}</span>
+                      <span className="pa-case-title">{study.title}</span>
+                      <span className="pa-case-impact">{study.impact}</span>
+                    </motion.button>
+                  ))}
+                  {/*
+                    Пустая вкладка говорит словами, а не пустотой: без строки
+                    экран выглядел бы сломанным переключателем.
+                  */}
+                  {layer.cases.length === 0 ? (
+                    <motion.p
+                      className="pa-cases-empty"
+                      data-testid={active ? "pa-cases-empty" : undefined}
+                      key={`${tab}-empty`}
+                      {...(active ? caseItem(0) : {})}
+                    >
+                      Работы с AI появятся здесь
+                    </motion.p>
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
           </div>
 
           <div className="pa-facts">

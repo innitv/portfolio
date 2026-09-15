@@ -500,6 +500,44 @@ function asTemplateSection(section: CaseDetailSection): CaseDetailSection {
 }
 
 /**
+ * Раздел лонгрида: метка — название, тезис — первый абзац, если он тезис.
+ *
+ * 🔴 Первый абзац поднимается в тезис НЕ ВСЕГДА. У блоков шаблона тезис —
+ * короткая строка без точки на конце, и подъём верен. У повествовательных
+ * разделов первый абзац — обычная проза: подняв его, страница получала
+ * пятистрочный «тезис» кеглем 32 вместо крупной мысли. Признак взят тот же,
+ * по которому тезисы отличаются в данных: короткая строка, не завершённая
+ * точкой.
+ */
+const THESIS_LIMIT = 140;
+
+function longreadSection(section: CaseDetailSection): CaseDetailSection {
+  const [lead] = section.body ?? [];
+  const isThesis = Boolean(lead) && lead.length <= THESIS_LIMIT && !/[.!?]$/.test(lead);
+
+  /*
+    🔴 Название раздела — ЗАГОЛОВОК, а не метка. Первый заход отдал его в
+    , и рассказ превратился в однородную массу текста с мелкими
+    служебными строчками вместо заголовков. Владелец: «никаких заголовков».
+
+    Метка над заголовком — паттерн страницы, и он не меняется: у блоков с
+    тезисом метка остаётся названием раздела и стоит НАД крупной строкой, как
+    в шаблоне. У рассказных разделов метки нет вовсе: их место занимает номер,
+    который каркас выводит сам.
+  */
+  /*
+    🔴 МЕТКА ЕСТЬ У КАЖДОГО БЛОКА — так устроен макет `189:707`: метка, тезис,
+    тело, и ни одного блока без метки. У повествовательных разделов метку даёт
+    короткое имя (`navLabel`), а тезисом остаётся заголовок раздела: поднимать
+    первый абзац нельзя, он проза и кеглем 44 занял бы пять строк.
+  */
+  if (isThesis) return asTemplateSection(section);
+  return section.navLabel && section.title
+    ? { ...section, kicker: section.navLabel }
+    : section;
+}
+
+/**
  * Разделы неразмеченного кейса, разложенные по каркасу шаблона.
  *
  * Каждая роль получает: свой раздел (если у кейса есть чем её занять), позицию по
@@ -583,14 +621,36 @@ function frameSections(
         раздела требует заголовок строкой.
       */
       /*
-        🔴 СОСТАВ ЭЛЕМЕНТОВ ВНУТРИ РОЛИ — тоже шаблонный. Элемент показывается
-        только если он есть у образца: у «Гипотез» это карточки, у «Проблем» и
-        «Бизнес-эффекта» — список, у «Контекста» — абзац. Пока брались все свои,
-        у «Флоу» в гипотезах стояли и список, и карточки, а в «Бизнес-эффекте» —
-        лишний абзац: страница снова была не шаблоном, а смесью.
+        🔴 ТЕКСТ РОЛИ — ТОЛЬКО СВОЙ. Есть у кейса свой раздел — на странице стоит
+        он один; нет — роль целиком берётся из шаблона как рыба и помечается
+        `framePlaceholder`.
+
+        Прежнее правило брало состав элементов у образца: абзац в «Контексте»,
+        карточки в «Гипотезах», список в «Проблемах». У кейсов, где текст набран
+        не тем же видом перечисления, свой текст молча выпадал, а его место
+        занимал текст образца — и на страницах РТК под метками «Контекст»,
+        «Гипотезы» и «Бизнес-эффект» стояли факты про кабинет А3: подключённые
+        банки, реестры, платёжные KPI. Три раздела «Услуг Web» и «Онбординга» не
+        показывались вовсе, хотя лежали в данных.
+
+        Владелец 14.09.2026 выбрал показывать свой список там, где у образца
+        проза или карточки: порядок блоков, метки и геометрия шаблона не
+        меняются — меняется только вид перечисления внутри блока.
+
+        Смешения, от которого защищало прежнее правило («Флоу» показывал и
+        список, и карточки), больше нет по той же причине: своё и шаблонное
+        теперь не встречаются в одном блоке.
       */
-      body: base?.body ? mine?.body ?? base.body : undefined,
-      items: base?.items ? (mine?.items?.length ? mine.items : base.items) : undefined,
+      body: mine ? mine.body : base?.body,
+      /*
+        🔴 КАРТОЧКИ И СПИСОК НЕ СТОЯТ В ОДНОМ БЛОКЕ. У «Флоу» и «Дизайн-системы»
+        раздел роли несёт и пункты, и карточки, и после перехода на «текст роли
+        только свой» (14.09.2026) блок гипотез показывал сразу оба перечисления:
+        три пункта решения, а под ними четыре карточки про то же самое. Ровно на
+        эту смесь владелец указывал 2026-08-17. Карточки старше: у образца в
+        «Гипотезах» стоят они.
+      */
+      items: mine ? (mine.cards?.length ? undefined : mine.items) : base?.items,
       /*
         🔴 МЕТКА ВСЕГДА ШАБЛОННАЯ. Владелец 2026-08-17, прямо: «никаких „Итоги“,
         „Решения“ и прочая ебатория — только то, что есть на шаблонном кейсе».
@@ -601,20 +661,24 @@ function frameSections(
       */
       kicker: base?.kicker ?? mine?.kicker,
       /*
-        Тезис свой, если он есть. У раздела из одних пунктов своего тезиса нет
-        («Проблемы и гипотезы» — только список), и тогда встаёт шаблонный: иначе
-        блок идёт без крупной строки, а у образца она есть. Заменишь текстом —
-        подставится свой.
+        Тезис — из своего раздела, если роль занята им. Чужой сюда не встаёт по
+        той же причине, что и чужой список: крупной строкой блока читается факт
+        о другом продукте. Раздел из одних пунктов остаётся без крупной строки —
+        тезис ему дописывается в данных, а не берётся у образца.
       */
-      title: (mine?.title || base?.title) ?? "",
-      /* Карточки и схема — там, где они есть у шаблона; свои в приоритете. */
-      cards: base?.cards ? mine?.cards ?? base.cards : undefined,
-      flow: base?.flow ? mine?.flow ?? base.flow : undefined,
+      title: (mine ? mine.title : base?.title) ?? "",
+      /* Карточки — свои, если роль занята своим разделом; иначе шаблонные. */
+      cards: mine ? mine.cards : base?.cards,
       /*
-        Дополнительные схемы идут туда же, где схема, и только своими: у
-        шаблона второй схемы нет, подставлять «из образца» нечего.
+        🔴 Схема пути — СВОЯ ИЛИ НИЧЬЯ, как текст. Шаблонная остаётся только
+        там, где роль целиком взята из образца: тогда она помечена рыбой вместе
+        с блоком. Под своим текстом чужой маршрут читается как маршрут этого
+        продукта — на «Подписках» РТК под собственным «Контекстом» стояли
+        «Проверить платежи», «Забрать реестр» и «Довести подключение банка», и
+        пометка рыбы с блока снималась, потому что текст-то был свой.
       */
-      flowMore: base?.flow ? mine?.flowMore : undefined,
+      flow: mine ? mine.flow : base?.flow,
+      flowMore: mine ? mine.flowMore : undefined,
       framePlaceholder: mine ? undefined : Boolean(base),
       frameFigures: role.figuresAfter,
       /*
@@ -737,6 +801,22 @@ export function PortfolioCaseView({
     успеха» не входят в список меток), у остальных он исключается ниже явно.
     Своих цифр блок не добавляет: при пустом разделе его просто не будет.
   */
+  /*
+    ─── РАСКЛАДКА ЛОНГРИДА ───────────────────────────────────────────────
+    Владелец 2026-08-27: «собери по швейцарским правилам». Включается сама,
+    когда у кейса нет ни одного кадра: шаблон построен вокруг пяти позиций
+    под показы и без них выдаёт пустые серые подложки между абзацами.
+
+    🔴 Признак — ОТСУТСТВИЕ КАДРОВ, а не тип кейса: правило смотрит на
+    материал, а не на ярлык. AI-кейс с кадрами останется в шаблоне.
+  */
+  const longread =
+    !caseStudy.coverImage &&
+    (caseStudy.detailSections ?? []).every(
+      (section) => !section.image && !section.images?.length,
+    ) &&
+    !caseStudy.layoutShots?.length;
+
   const outcomes = caseOutcomes(caseStudy);
 
   /*
@@ -758,7 +838,32 @@ export function PortfolioCaseView({
       .flatMap(sectionShots)
       .slice(0, 2);
 
-  const sections = isMarkedCase
+  /*
+    🔴 В ЛОНГРИДЕ ПОКАЗЫВАЮТСЯ ВСЕ РАЗДЕЛЫ, а не четыре роли шаблона.
+    Владелец 2026-08-27: «сразу все блоки». Шаблон отбирает блоки по своим
+    меткам — в рассказе это выбрасывало восемь разделов из тринадцати.
+
+    Каждый раздел проходит через asTemplateSection: его название
+    становится меткой, а первый абзац — тезисом. Раздел-источник цифр
+    текстом не показывается, но блок величин встаёт на его место.
+  */
+  const sections = longread
+    ? ownSections.reduce<CaseDetailSection[]>((list, section) => {
+        /*
+          Раздел-источник цифр текстом не показывается: на его месте встаёт
+          плашка величин. Владелец 14.09.2026 вернул её вместе со схемой пути —
+          это блоки показа, а не текстовые, и правило «метка + тезис + тело» их
+          не касается.
+        */
+        if ((section.kicker ?? section.title) === outcomes?.title) {
+          const previous = list[list.length - 1];
+          if (previous) previous.frameFigures = true;
+          return list;
+        }
+        list.push(longreadSection(section));
+        return list;
+      }, [])
+    : isMarkedCase
     ? ownSections.filter((section) =>
         section.kicker ? MACET_SECTIONS.includes(section.kicker) : false,
       )
@@ -770,6 +875,17 @@ export function PortfolioCaseView({
       );
 
   /*
+    ─── ОГЛАВЛЕНИЯ СБОКУ БОЛЬШЕ НЕТ ──────────────────────────────────────────
+
+    Рельс со списком разделов, указатель места и якоря сняты 14.09.2026 по
+    решению владельца: «убрать левую навигацию и вернуть содержимое к сетке,
+    как на остальных кейсах».
+
+    Вместе с ним ушёл и счёт места чтения — наблюдатель, а затем пересчёт по
+    координатам на каждом кадре прокрутки. Показывать его стало нечему.
+  */
+
+  /*
     Цифры-рыба: у «Флоу» и «Карты опций» своих чисел нет — их метрики измеряются
     в секундах и минутах, а разбор понимает проценты, пункты и «из N». По той же
     правке владельца блок всё равно ставится, с величинами шаблона.
@@ -777,12 +893,25 @@ export function PortfolioCaseView({
   const figures = outcomes ?? templateCaseOutcomes();
   const figuresArePlaceholder = !outcomes;
 
+  /*
+    🔴 Соседи считаются ВНУТРИ СВОЕЙ ГРУППЫ работ, а не по всему списку.
+
+    Список компании с 2026-08-27 держит и обычные работы, и сделанные с AI —
+    их разделяют вкладки на синем экране. Пока соседство считалось по всему
+    списку, с последней обычной работы «следующий» уводил в AI-раздел: человек
+    листал подряд то, что экран показывает порознь. Поймано тестом «переход к
+    соседним кейсам знает место человека в списке».
+  */
+  const groupCases = React.useMemo(
+    () => company.cases.filter((item) => Boolean(item.ai) === Boolean(caseStudy.ai)),
+    [company.cases, caseStudy.ai],
+  );
+
   /** Соседний кейс той же компании — увести дальше, а не оборвать страницу. */
   const next = React.useMemo(() => {
-    const list = company.cases;
-    const at = list.findIndex((item) => item.id === caseStudy.id);
-    return list[(at + 1) % list.length];
-  }, [company.cases, caseStudy.id]);
+    const at = groupCases.findIndex((item) => item.id === caseStudy.id);
+    return groupCases[(at + 1) % groupCases.length];
+  }, [groupCases, caseStudy.id]);
 
   /*
     ─── СОСЕДИ ПО СПИСКУ КОМПАНИИ ────────────────────────────────────────────
@@ -796,13 +925,12 @@ export function PortfolioCaseView({
     последнего — следующего, у среднего есть оба.
   */
   const siblings = React.useMemo(() => {
-    const list = company.cases;
-    const at = list.findIndex((item) => item.id === caseStudy.id);
+    const at = groupCases.findIndex((item) => item.id === caseStudy.id);
     return {
-      next: at >= 0 && at < list.length - 1 ? list[at + 1] : null,
-      prev: at > 0 ? list[at - 1] : null,
+      next: at >= 0 && at < groupCases.length - 1 ? groupCases[at + 1] : null,
+      prev: at > 0 ? groupCases[at - 1] : null,
     };
-  }, [company.cases, caseStudy.id]);
+  }, [groupCases, caseStudy.id]);
 
   return (
     /*
@@ -811,7 +939,12 @@ export function PortfolioCaseView({
       страницы». Без такого атрибута любая правка пары кадров или заголовка
       уходила бы селектором во все восемь страниц, включая кейс-образец.
     */
-    <div className="pc-root" data-testid="pc-root" data-case={caseStudy.id}>
+    <div
+      className="pc-root"
+      data-case={caseStudy.id}
+      data-layout={longread ? "longread" : undefined}
+      data-testid="pc-root"
+    >
       {/*
         Сетки-подложки здесь нет намеренно (снята 2026-08-13 по решению
         владельца). На `/archive` клетка — часть плаката и видна на чернилах
@@ -876,21 +1009,23 @@ export function PortfolioCaseView({
           позиция шаблона пропадала. Мой прежний замер порядка её не видел —
           он смотрел только внутрь `.pc-flow`, а герой лежит выше.
         */}
+        {/*
+          В лонгриде позиции героя нет: пустая плоскость во всю ширину
+          открывала бы текстовый кейс серым полем.
+        */}
         <div className="pc-shots" data-testid="pc-hero" data-wide="true">
           {caseStudy.coverImage ? (
             <CaseShot eager image={caseStudy.coverImage} />
-          ) : (
+          ) : longread ? null : (
             <figure className="pc-shot">
               {/*
-                Пустая плоскость героя. `data-surface` на ней — не украшение: у
-                кейса без обложки страница иначе начинается серым полем во всю
-                ширину (правка владельца 2026-08-27 для «Дизайн-системы»).
+                Пустая плоскость героя — геометрия позиции без кадра.
+
+                Акцентный градиент, который держала здесь «Дизайн-система» с
+                2026-08-27, ушёл вместе с заглушкой: у кейса появилась своя
+                обложка, и плоскость снова нужна только там, где кадра нет.
               */}
-              <div
-                className="pc-shot-frame"
-                data-empty="true"
-                data-surface={caseStudy.heroSurface}
-              />
+              <div className="pc-shot-frame" data-empty="true" />
             </figure>
           )}
         </div>
@@ -931,7 +1066,7 @@ export function PortfolioCaseView({
                 признаком, а не общим правилом для всех смещённых блоков.
               */
               data-intro="true"
-              data-shift={isShifted(0)}
+              data-shift={longread ? undefined : isShifted(0)}
               data-testid="pc-problem"
             >
               <div className="pc-kicker">О проекте</div>
@@ -939,6 +1074,15 @@ export function PortfolioCaseView({
                 {caseStudy.problem}
               </p>
               <p className="pc-section-text">{caseStudy.context}</p>
+              {/* Вынос вводного блока: масштаб работы числом на поле. */}
+              {longread && caseStudy.introAside ? (
+                <aside className="pc-aside">
+                  {caseStudy.introAside.value ? (
+                    <b className="pc-aside-value">{caseStudy.introAside.value}</b>
+                  ) : null}
+                  <span className="pc-aside-note">{caseStudy.introAside.note}</span>
+                </aside>
+              ) : null}
             </section>
 
             {/*
@@ -952,20 +1096,22 @@ export function PortfolioCaseView({
               заменю». У «Подписок» и «Онбординга» кадр всего один, и без места
               позиция шаблона пропадала, а страница начиналась текстом подряд.
             */}
-            <div className="pc-shots" data-testid="pc-intro-shots">
-              {introShots.length ? (
-                introShots.map((shot) => <CaseShot image={shot} key={shot.src} />)
-              ) : (
-                <>
-                  <figure className="pc-shot">
-                    <div className="pc-shot-frame" data-empty="true" />
-                  </figure>
-                  <figure className="pc-shot">
-                    <div className="pc-shot-frame" data-empty="true" />
-                  </figure>
-                </>
-              )}
-            </div>
+            {introShots.length || !longread ? (
+              <div className="pc-shots" data-testid="pc-intro-shots">
+                {introShots.length ? (
+                  introShots.map((shot) => <CaseShot image={shot} key={shot.src} />)
+                ) : (
+                  <>
+                    <figure className="pc-shot">
+                      <div className="pc-shot-frame" data-empty="true" />
+                    </figure>
+                    <figure className="pc-shot">
+                      <div className="pc-shot-frame" data-empty="true" />
+                    </figure>
+                  </>
+                )}
+              </div>
+            ) : null}
 
             {sections.map((section, sectionIndex) => {
               const shots = sectionShots(section);
@@ -977,7 +1123,20 @@ export function PortfolioCaseView({
                 роль может отсутствовать, и счёт по индексу увёл бы всё
                 чередование на такт — «Проблемы» встали бы у поля вместо трети.
               */
-              const shifted = section.frameShift ?? isShifted(sectionIndex + 1);
+              /*
+                🔴 У РАССКАЗА ЧЕРЕДОВАНИЯ НЕТ: ОДНА ЛИНИЯ НА ВСЕ БЛОКИ.
+
+                Шаблон уводит каждый второй текстовый блок на треть ширины —
+                приём макета, где между разделами стоят кадры и глаз каждый раз
+                начинает с новой точки. В рассказе на восемь разделов подряд
+                кадров нет, и вертикаль прыгала 60 → 503 → 60 → 503: читать
+                сплошной текст, который дважды за экран меняет левый край,
+                нельзя. Владелец 14.09.2026: «поставь силовую линию для
+                текстовых блоков одну».
+              */
+              const shifted = longread
+                ? undefined
+                : section.frameShift ?? isShifted(sectionIndex + 1);
               /*
                 Размеченный раздел несёт тезис в самом заголовке: `title` — это
                 первое предложение содержания, набранное крупно (макет 88:248).
@@ -1042,11 +1201,42 @@ export function PortfolioCaseView({
                       </h2>
                     ) : null}
                     {leadFirst ? <p className="pc-lead">{first}</p> : null}
+                    {/*
+                      ─── ПАРА «БЫЛО → СТАЛО» ────────────────────────────────
+                      Две колонки с чертой между ними: слева прежний порядок,
+                      справа новый. Стоит до обычного текста раздела — сначала
+                      разница, потом подробности.
+                    */}
+                    {section.compare ? (
+                      <div className="pc-compare">
+                        <div className="pc-compare-cell">
+                          <div className="pc-compare-mark">Было</div>
+                          <p className="pc-compare-text">{section.compare.before}</p>
+                        </div>
+                        <div className="pc-compare-cell" data-after="true">
+                          <div className="pc-compare-mark">Стало</div>
+                          <p className="pc-compare-text">{section.compare.after}</p>
+                        </div>
+                      </div>
+                    ) : null}
                     {paragraphs.map((paragraph) => (
                       <p className="pc-section-text" key={paragraph}>
                         {paragraph}
                       </p>
                     ))}
+                    {/*
+                      Вынос на правое поле. В разметке он идёт после текста, а
+                      в сетке встаёт рядом с ним: порядок чтения диктором —
+                      сначала рассказ, потом сноска к нему.
+                    */}
+                    {section.aside ? (
+                      <aside className="pc-aside">
+                        {section.aside.value ? (
+                          <b className="pc-aside-value">{section.aside.value}</b>
+                        ) : null}
+                        <span className="pc-aside-note">{section.aside.note}</span>
+                      </aside>
+                    ) : null}
                     {/*
                       ─── ПУНКТЫ РАЗМЕЧЕННОГО РАЗДЕЛА — НУМЕРОВАННЫЙ СПИСОК ──
                       Вторая редакция макета 88:248 (владелец, 2026-08-14,

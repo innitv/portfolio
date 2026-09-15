@@ -1,0 +1,83 @@
+{
+  "$description": "Тиер 3 — компонентные токены портфолио. Область компонента, ссылается только на semantic.json. Здесь живут нынешние --pa-* (главная и синий экран) и --pc-* (страница кейса), переписанные как область, а не как отдельный словарь. Раскладочные формулы (clamp/calc с vw) остаются в CSS: это геометрия конкретной поверхности, а не значение системы.",
+  "archive": {
+    "$description": "Главная и синий экран компании.",
+    "surface": { "$type": "color", "$value": "{surface.page}" },
+    "sheet-surface": { "$type": "color", "$value": "{surface.accent}" },
+    "text": { "$type": "color", "$value": "{text.on-ink}" },
+    "text-quiet": { "$type": "color", "$value": "{text.quiet}" },
+    "text-muted": { "$type": "color", "$value": "{text.muted}" },
+    "link-hover": { "$type": "color", "$value": "{text.hover}" },
+    "grid-line": { "$type": "color", "$value": "{border.on-ink}" },
+    "field": { "$type": "dimension", "$value": "{space.field}", "$description": "Поле страницы. Величину под ширину экрана даёт семантика — своих медиазапросов у этого тиера нет с 14.09.2026." },
+    "cell": { "$type": "dimension", "$value": "{space.grid}", "$description": "Сторона клетки фоновой подложки. Квадратная: один шаг на обе оси." },
+    "stripe-edge": { "$type": "dimension", "$value": "{border.edge}" },
+    "separator": { "$type": "dimension", "$value": "{border.edge}" },
+    "meta-size": { "$type": "dimension", "$value": "{size.meta}" },
+    "meta-tracking": { "$type": "dimension", "$value": "{tracking.meta}" },
+    "layer-sheet": { "$type": "number", "$value": "{layer.sheet}" },
+    "layer-curtain": { "$type": "number", "$value": "{layer.curtain}" }
+  },
+  "case": {
+    "$description": "Страница кейса: шаблон и лонгрид.",
+    "surface": { "$type": "color", "$value": "{surface.page-quiet}" },
+    "text": { "$type": "color", "$value": "{text.default}" },
+    "text-soft": { "$type": "color", "$value": "{color.ink.900}", "$description": "78 % чернил на поле страницы — смесь считается в CSS через color-mix." },
+    "muted": { "$type": "color", "$value": "{color.ink.900}", "$description": "60 % чернил на поле страницы." },
+    "rule": { "$type": "color", "$value": "{border.default}" },
+    "rule-soft": { "$type": "color", "$value": "{border.soft}" },
+    "shot-plate": { "$type": "color", "$value": "{surface.plate}" },
+    "figures-surface": { "$type": "color", "$value": "{surface.accent}" },
+    "body-size": { "$type": "dimension", "$value": "{size.body}" },
+    "meta-size": { "$type": "dimension", "$value": "{size.meta}" },
+    "part-size": { "$type": "dimension", "$value": "{size.part}" },
+    "value-size": { "$type": "dimension", "$value": "{size.value}" },
+    "gap-section": { "$type": "dimension", "$value": "{space.section}" },
+    "gap-block": { "$type": "dimension", "$value": "{space.block}" },
+    "gap-thesis": { "$type": "dimension", "$value": "{space.stack-md}" }
+  },
+  "rail": {
+    "$description": "Боковой рельс лонгрида: список разделов и указатель места.",
+    "width": { "$type": "dimension", "$value": "200px", "$description": "Отклонение от шкалы: ширина подобрана под длину имён разделов." },
+    "gap-column": { "$type": "dimension", "$value": "{space.12}" },
+    "gap-row": { "$type": "dimension", "$value": "{space.3}" },
+    "size": { "$type": "dimension", "$value": "{size.caption}" },
+    "num-size": { "$type": "dimension", "$value": "{size.caption}" },
+    "text": { "$type": "color", "$value": "{case.muted}" },
+    "text-current": { "$type": "color", "$value": "{text.default}" },
+    "mark": { "$type": "color", "$value": "{text.default}" },
+    "motion": { "$type": "transition", "$value": "{motion.hover}" },
+    "top": { "$type": "dimension", "$value": "{space.24}", "$description": "Отступ липкого блока от верха окна." }
+  },
+  "compare": {
+    "$description": "Пара «было → стало» в лонгриде.",
+    "gap": { "$type": "dimension", "$value": "{space.8}" },
+    "inset": { "$type": "dimension", "$value": "{space.6}" },
+    "size": { "$type": "dimension", "$value": "{size.body}" },
+    "mark-size": { "$type": "dimension", "$value": "{size.caption}" },
+    "mark": { "$type": "color", "$value": "{case.muted}" },
+    "rule": { "$type": "color", "$value": "{border.default}" },
+    "rule-inner": { "$type": "color", "$value": "{border.soft}" }
+  },
+  "aside": {
+    "$description": "Вынос: величина и подпись к ней.",
+    "size": { "$type": "dimension", "$value": "{size.meta}" },
+    "value-size": { "$type": "dimension", "$value": "{size.part}" },
+    "rule": { "$type": "color", "$value": "{text.default}" },
+    "gap": { "$type": "dimension", "$value": "{space.10}" }
+  },
+  "shot": {
+    "$description": "Показ: подложка кадра и слайдер.",
+    "plate": { "$type": "color", "$value": "{surface.plate}" },
+    "dot": { "$type": "color", "$value": "{border.default}" },
+    "dot-active": { "$type": "color", "$value": "{text.default}" }
+  },
+  "race": {
+    "$description": "Пасхалка заезда на полосе Archive. Единственное место, где живут сигнальные цвета.",
+    "red": { "$type": "color", "$value": "{status.danger}" },
+    "green": { "$type": "color", "$value": "{status.go}" },
+    "duration": { "$type": "duration", "$value": "{duration.race}" },
+    "easing": { "$type": "cubicBezier", "$value": "{easing.race}" },
+    "distance": { "$type": "dimension", "$value": "1200px", "$description": "Отклонение: дистанция подбиралась под ширину полосы." }
+  }
+}

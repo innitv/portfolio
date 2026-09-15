@@ -475,6 +475,119 @@ test("прямой заход на маршрут компании открыв�
  * Проверка сторожит именно ОТСУТСТВИЕ: вернуть блок обратно легко, и заметить
  * это на странице в восемь тысяч пикселей трудно.
  */
+/*
+ * ─── ВЫСОТА СПИСКА РАБОТ НЕ ЗАВИСИТ ОТ ВКЛАДКИ ──────────────────────────────
+ *
+ * Дефект 15.09.2026: на «ai-работы» работ меньше, список сжимался, и величины
+ * компании под ним прыгали вверх — на 1440 это 61 px, на 390 — 30.
+ *
+ * Прежняя защита считала высоту формулой «строк × 56», где 56 — тач-цель, а не
+ * рост строки: заголовок набран `clamp(20px, 2.3vw, 32px)`, и на узком экране
+ * длинное название переносится на две строки. Поэтому проверяются ОБЕ ширины:
+ * на одной ошибку давала формула, на другой — перенос.
+ */
+test("список работ держит высоту на обеих вкладках", async ({ page }) => {
+  await page.goto(portfolioUrl("/a3"));
+  await expect(page.getByTestId("pa-cases")).toBeVisible();
+
+  const measure = async () =>
+    page.evaluate(() => {
+      const cases = document.querySelector(".pa-cases")!.getBoundingClientRect();
+      const facts = document.querySelector(".pa-facts")!.getBoundingClientRect();
+      return { cases: Math.round(cases.height), facts: Math.round(facts.top) };
+    });
+
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ height: 900, width });
+    await page.getByRole("tab", { name: "работы", exact: true }).click();
+    const works = await measure();
+
+    await page.getByRole("tab", { name: "ai-работы" }).click();
+    await expect(page.getByTestId("pa-case-agent-studio")).toBeVisible();
+    const ai = await measure();
+
+    expect(ai.cases, `Ширина ${width}: список сжался на короткой вкладке`).toBe(
+      works.cases,
+    );
+    expect(ai.facts, `Ширина ${width}: величины компании переехали`).toBe(
+      works.facts,
+    );
+  }
+});
+
+/*
+ * ─── СЛАЙДЕР КАДРОВ: ОДНО ПОЛОТНО НА ВСЕ СЛАЙДЫ ────────────────────────────
+ *
+ * Ячейка «до редизайна» на «Подписках» листает три экрана (15.09.2026). Все
+ * слайды собраны на полотне 2140 × 1196 намеренно.
+ *
+ * 🔴 Мерить высоту рамки тут бесполезно — её задаёт `aspect-ratio` в CSS, а не
+ * содержимое: вертикальный кадр встанет в ту же рамку и молча обрежется по
+ * бокам. Поэтому сторожится пропорция самих полотен, то есть ровно то, что
+ * ломается при замене кадра «похожим».
+ *
+ * Подпись проверяется рядом: она принадлежит активному слайду, и потеря этой
+ * связи — единственный способ показать кадр с чужим объяснением под ним.
+ */
+test("слайдер кадров листается и держит полотно", async ({ page }) => {
+  await page.goto(portfolioUrl("/rtk/case/subscriptions"));
+
+  const slider = page.locator('.pc-shot[data-slider="true"]').first();
+  await slider.scrollIntoViewIfNeeded();
+  await expect(slider).toBeVisible();
+
+  const caption = slider.locator("figcaption");
+  const first = (await caption.textContent())?.trim() ?? "";
+
+  /*
+    Кадры грузятся лениво, и на узком экране соседние слайды доезжают позже
+    первого: измерять до этого — мерить нули.
+  */
+  await expect
+    .poll(
+      async () =>
+        slider
+          .locator(".pc-shot-slide img")
+          .evaluateAll((nodes) =>
+            nodes.every((node) => (node as HTMLImageElement).naturalWidth > 0),
+          ),
+      { message: "Кадры слайдера не загрузились" },
+    )
+    .toBe(true);
+
+  /*
+    Пропорция округляется до десятой: у разных ширин webp последний знак пляшет
+    (1.79 против 1.80 на том же полотне), а кадр чужой геометрии отличается
+    куда грубее — 1.23 против 1.8.
+  */
+  const shapes = await slider.locator(".pc-shot-slide img").evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const image = node as HTMLImageElement;
+      return image.naturalHeight
+        ? Math.round((image.naturalWidth / image.naturalHeight) * 10) / 10
+        : 0;
+    }),
+  );
+
+  expect(shapes.length, "Слайдер собрался без слайдов").toBeGreaterThan(1);
+  expect(shapes, "Слайд не загрузился").not.toContain(0);
+  expect(new Set(shapes).size, `Полотна разной пропорции: ${shapes.join(", ")}`).toBe(1);
+
+  /*
+    На узком экране стрелок нет: там кадр листают смахиванием, и проверка идёт
+    той же прокруткой трека, а не нажатием кнопки, которой на экране не бывает.
+  */
+  const arrow = slider.getByRole("button", { name: "Следующий кадр" });
+  if (await arrow.isVisible()) {
+    await arrow.click();
+  } else {
+    await slider
+      .locator(".pc-shot-track")
+      .evaluate((track) => track.scrollBy({ behavior: "instant", left: track.clientWidth }));
+  }
+  await expect(caption, "Подпись не пошла за кадром").not.toHaveText(first);
+});
+
 test("на странице кейса нет блоков вне макета", async ({ page }) => {
   await page.goto(portfolioUrl("/a3/case/dashboard-redesign"));
   await expect(page.getByTestId("pc-title")).toBeVisible();

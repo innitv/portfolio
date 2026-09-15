@@ -69,20 +69,36 @@
    * Нижние границы `clamp` держат телефон: на 390 макета нет, и мельче 15 px
    * тело уводить нельзя — Safari на iOS зумит страницу при фокусе.
    */
-  --pc-title-size: clamp(32px, var(--pa-inner) / 13.85, 130px);
-  --pc-body-size: clamp(15px, var(--pa-inner) / 81.8, 22px);
-  /* Тезис раздела: 44/46 в макете. Ровно 2 кегля тела, как там же. */
-  --pc-lead-size: clamp(24px, var(--pa-inner) / 40.9, 44px);
+  --pc-title-size: clamp(32px, var(--pa-inner) / 13.85, 132px);
+  /*
+   * Тело. 🔴 Роста нет: на 1440 формула давала 16.14 против ровных 16 у пары
+   * «было → стало», выноса и схемы — пятнадцать узлов против тринадцати на
+   * величинах, различающихся на четырнадцать сотых пикселя.
+   */
+  --pc-body-size: var(--s-type-body);
+  /*
+   * Тезис раздела — верхняя ступень текста.
+   *
+   * 🔴 Плавный рост снят 14.09.2026. Формула `clamp(24, inner/40.9, 44)` на
+   * 1440 давала 32.27, а заголовок раздела рядом — 24.48: две ступени в одном
+   * пикселе друг от друга и обе дробные. Теперь ступень приходит готовой из
+   * слоя ролей и меняется на точке перелома: 32 на десктопе, 24 ниже.
+   */
+  --pc-lead-size: var(--s-type-part);
   /* Лид под именем кейса: 20/28 в макете (571 шириной). */
-  --pc-lede-size: clamp(14px, var(--pa-inner) / 90, 20px);
+  --pc-lede-size: var(--s-type-lead);
   /* Строка шапки: 20/28 в макете — она КРУПНЕЕ метки, а не равна ей. */
   --pc-top-size: clamp(12px, var(--pa-inner) / 90, 20px);
   /* Метка раздела и подпись кадра: 16/22 и 16/20 в макете. */
-  --pc-meta-size: clamp(11px, var(--pa-inner) / 112.5, 16px);
+  --pc-meta-size: clamp(12px, var(--pa-inner) / 112.5, 16px);
   /* Номер нумерованного пункта: 14/20 в макете — мельче метки. */
-  --pc-num-size: clamp(10px, var(--pa-inner) / 128.6, 14px);
-  /* Заголовок карточки гипотезы: 32/36 в макете (узел `124:2018`). */
-  --pc-card-title-size: clamp(20px, var(--pa-inner) / 56.25, 32px);
+  --pc-num-size: clamp(12px, var(--pa-inner) / 128.6, 16px);
+  /*
+   * Заголовок карточки гипотезы. Делит ступень с заголовком раздела: на 1440
+   * они различались на один пиксель (23.47 против 24.48) — разница, которой
+   * никто не задумывал и которую глаз не видит.
+   */
+  --pc-card-title-size: var(--s-type-sub);
   /* Тезис → линия блока карточек: 80 в макете. */
   --pc-gap-cards: clamp(32px, 4.17vw, 80px);
   /* Линия → карточки и карточки → линия следующего ряда: 40 в макете. */
@@ -96,9 +112,9 @@
    * тезис и тело. Величина оставлена для семи кейсов, которые ещё идут по
    * старой структуре и рендерят `title` этим классом.
    */
-  --pc-part-size: clamp(19px, 0.9rem + 0.7vw, 26px);
+  --pc-part-size: var(--s-type-sub);
   /* Значение в паре «метка → значение». */
-  --pc-value-size: clamp(16px, 1rem + 0.28vw, 20px);
+  --pc-value-size: var(--s-type-lead);
   /*
    * ─── ВЕРТИКАЛЬНЫЙ РИТМ ВЗЯТ ИЗ МАКЕТА 95:1004 ЦЕЛИКОМ ────────────────────
    * 🔴 Правка 2026-08-14: до неё здесь стояли свои формулы (`9vh`, `1.7vw`), и
@@ -199,16 +215,16 @@
    * `.pa-case` на синем экране. Переменная под смешанный синий была заведена
    * первой сборкой и снята вместе с ней — на кобальте сайта такого приёма нет.
    */
-  --pc-jump-title-size: clamp(22px, var(--pa-inner) / 34, 44px);
+  --pc-jump-title-size: var(--s-type-part);
   --pc-jump-pad: clamp(24px, 3.33vw, 64px);
-  --pc-figure-size: clamp(40px, var(--pa-inner) / 22, 82px);
+  --pc-figure-size: clamp(40px, var(--pa-inner) / 22, 84px);
   --pc-figure-gap: clamp(20px, 2.08vw, 40px);
   --pc-figure-pad: clamp(12px, 1.25vw, 24px);
   --pc-path-pad: clamp(20px, 2.5vw, 48px);
   --pc-path-gap: clamp(12px, 1.25vw, 24px);
   --pc-path-step-pad: clamp(10px, 0.83vw, 16px);
   --pc-path-step-size: clamp(12px, 0.83vw, 16px);
-  --pc-path-label-size: clamp(15px, 1.04vw, 20px);
+  --pc-path-label-size: clamp(16px, 1.04vw, 20px);
   /* Линия → строка пункта. */
   --pc-gap-rule: clamp(10px, 1.04vw, 20px);
   /*
@@ -356,6 +372,29 @@
     rgb(105, 166, 241) 100.67%
   );
   /* Точки листания у показа-слайдера: чернила с альфой, активная — полные. */
+  /* Лонгрид: ширина полосы, колонка рельса и шаг между разделами. */
+  /*
+   * Мера рассказа. Держит 60–72 знака: предел, на котором глаз возвращается с
+   * конца строки на начало следующей, не теряя места.
+   *
+   * 🔴 ЗНАЧЕНИЕ ЗАВИСИТ ОТ ШИРИНЫ, потому что от неё зависит не мера, а то,
+   * чем она ограничена. На широком экране колонку режет сама мера, и 820 px
+   * при кегле 16 дают 68 знаков. На планшете рельса нет, рассказ занимает всю
+   * полосу, и 820 перестают быть ограничением: замер на 768 (14.09.2026) дал
+   * 688 px и 73 знака — на два больше предела.
+   */
+  --pc-longread-measure: 820px;
+
+  /* Пара «было → стало» и вынос на поле: отбивки и кегли. */
+  --pc-compare-gap: 32px;
+  --pc-compare-pad: 28px;
+  --pc-compare-size: 16px;
+  --pc-compare-mark: 12px;
+  --pc-aside-size: 16px;
+  --pc-aside-value: var(--s-type-part);
+  --pc-aside-gap: 40px;
+  /* Рельс лонгрида: отступ липкого блока, ритм строк и кегли указателей. */
+
   --pc-shot-dot: rgba(11, 11, 11, 0.22);
   --pc-shot-dot-active: var(--pa-ink);
 }
@@ -439,8 +478,8 @@ html[data-portfolio-surface="case"] body {
   content: "";
   position: absolute;
   inset-inline: -8px;
-  inset-block: -14px;
-  min-block-size: 44px;
+  inset-block: calc(var(--p-space-4) * -1);
+  min-block-size: var(--s-target-touch);
 }
 
 .pc-home {
@@ -485,7 +524,7 @@ html[data-portfolio-surface="case"] body {
  * между двумя экранами, которое видно человеку в движении.
  */
 .pc-head {
-  margin-block-start: 18px;
+  margin-block-start: var(--p-space-5);
 }
 
 .pc-index {
@@ -497,7 +536,7 @@ html[data-portfolio-surface="case"] body {
 }
 
 .pc-title {
-  margin-block-start: 18px;
+  margin-block-start: var(--p-space-5);
   /*
    * 1295 из 1800 в макете — 71.9 % внутренней ширины. Без ограничения имя тянулось
    * на все 12 колонок: на 2000 строка уходила на 1880 против макетных 1352.
@@ -539,7 +578,7 @@ html[data-portfolio-surface="case"] body {
 .pc-impact-line {
   margin-block-start: 20px;
   display: inline-block;
-  padding: 6px 12px;
+  padding: var(--p-space-2) var(--p-space-3);
   background-color: var(--pa-cobalt);
   font-family: var(--pa-mono);
   font-size: var(--pa-meta-size);
@@ -817,7 +856,7 @@ html[data-portfolio-surface="case"] body {
  * опускала каждый следующий факт на 28 px, и «Клиент» стоял выше «Года».
  * В столбик факты складываются только на узком экране — там она и нужна.
  */
-@media (max-width: 599px) {
+@media (max-width: 639px) {
   .pc-fact + .pc-fact {
     margin-block-start: 28px;
   }
@@ -1386,7 +1425,11 @@ ul.pc-section-text li + li {
    * плоскости и внутренние поля плашки забрали у колонки 44 px, и «пунктов» при
    * 0.42 перестало влезать в строку с числом.
    */
-  font-size: 0.34em;
+  /*
+   * 🔴 Не доля от величины, а своя ступень. Доля давала 20.4 на десктопе и
+   * 13.6 на телефоне — два кегля, которых нет ни в одной шкале.
+   */
+  font-size: var(--s-type-lead);
   letter-spacing: normal;
   color: var(--pc-muted);
 }
@@ -1433,9 +1476,27 @@ ul.pc-section-text li + li {
   }
 }
 
-@media (max-width: 599px) {
+@media (max-width: 639px) {
   .pc-figures-row {
     grid-template-columns: 1fr;
+  }
+
+  /*
+   * 🔴 ПАРА КАДРОВ ПЕРЕСТАЁТ БЫТЬ ПАРОЙ.
+   *
+   * Макетная пропорция «узкий + широкий» — это 4 и 8 колонок из двенадцати.
+   * На 375 четыре колонки дают 48 px: замер 14.09.2026 показал кадр 48 × 39,
+   * меньше иконки, и разобрать на нём было нечего. Пропорция — приём широкой
+   * полосы; на телефоне кадры идут друг под другом во всю ширину, каждый со
+   * своей высотой.
+   */
+  .pc-shots:not([data-wide="true"]) {
+    grid-template-columns: 1fr;
+  }
+
+  .pc-shots:not([data-wide="true"]) > .pc-shot:first-child,
+  .pc-shots:not([data-wide="true"]) > .pc-shot:last-child {
+    grid-column: 1 / -1;
   }
 }
 
@@ -1742,7 +1803,7 @@ ul.pc-section-text li + li {
 }
 
 .pc-metric-caption {
-  margin-block-start: 10px;
+  margin-block-start: var(--p-space-3);
   font-family: var(--pa-mono);
   font-size: 12px;
   line-height: 1.4;
@@ -1896,7 +1957,7 @@ ul.pc-section-text li + li {
   display: flex;
   flex-direction: column;
   align-items: start;
-  gap: 10px;
+  gap: var(--p-space-3);
   padding: 20px;
   border: 0;
   background: transparent;
@@ -1928,7 +1989,7 @@ ul.pc-section-text li + li {
 .pc-jump-meta {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--p-space-3);
   font-family: var(--pa-mono);
   font-size: var(--pa-meta-size);
   letter-spacing: var(--pa-meta-tracking);
@@ -2048,8 +2109,8 @@ ul.pc-section-text li + li {
   content: "";
   position: absolute;
   inset-inline: -8px;
-  inset-block: -13px;
-  min-block-size: 44px;
+  inset-block: calc(var(--p-space-3) * -1);
+  min-block-size: var(--s-target-touch);
 }
 
 .pc-foot a:focus-visible {
@@ -2099,7 +2160,7 @@ ul.pc-section-text li + li {
    */
   margin-block-start: calc(var(--pa-top-leading) + 18px);
   font-family: var(--pa-sans);
-  font-size: clamp(40px, var(--pa-inner) / 4.6, 215px);
+  font-size: clamp(40px, var(--pa-inner) / 4.6, 216px);
   /* Вес 400, как у имени на синем экране (`.pa-huge` его не задаёт и наследует
      обычное начертание). Стояло 600 — надпись жирнела прямо в момент подмены. */
   font-weight: 400;
@@ -2451,15 +2512,15 @@ ul.pc-section-text li + li {
   display: flex;
   align-items: center;
   justify-content: center;
-  inline-size: 44px;
-  block-size: 44px;
+  inline-size: var(--s-target-touch);
+  block-size: var(--s-target-touch);
   padding: 0;
   border: 0;
   border-radius: 50%;
   background-color: var(--pa-paper);
   color: var(--pa-ink);
   font-family: var(--pa-mono);
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
   cursor: pointer;
   transition: opacity var(--pa-dur-hover) var(--pa-ease-out-sheet);
@@ -2478,6 +2539,12 @@ ul.pc-section-text li + li {
   cursor: default;
 }
 
+/*
+ * Точки листания лежат ПОВЕРХ кадра, поэтому у них своя подложка: на кейсе
+ * «Подписки» слайды — тёмные экраны телефона, и точка цветом чернил на них
+ * пропадала совсем. Капсула цветом бумаги — тот же приём, что у стрелок, и
+ * держит управление читаемым на кадре любой яркости.
+ */
 .pc-shot-dots {
   position: absolute;
   inset-block-end: 16px;
@@ -2485,6 +2552,9 @@ ul.pc-section-text li + li {
   transform: translateX(-50%);
   display: flex;
   gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--p-radius-pill);
+  background-color: var(--pa-paper);
 }
 
 .pc-shot-dot {
@@ -2546,5 +2616,439 @@ ul.pc-section-text li + li {
 
   .pc-path[data-slider="true"] .pc-path-plate {
     padding-inline: var(--pc-path-pad);
+  }
+}
+
+/*
+ * ─── ЛОНГРИД: ШВЕЙЦАРСКИЕ ПРАВИЛА ──────────────────────────────────────────
+ *
+ * Владелец 2026-08-27: «откати врезки и собери по швейцарским правилам»,
+ * затем — «сразу все блоки». Включается сама, когда у кейса нет ни одного
+ * кадра: шаблон построен вокруг пяти позиций под показы и без них выдаёт
+ * пустые серые подложки между абзацами.
+ *
+ * 🔴 ДВА ЗАХОДА ДО ЭТОГО БЫЛИ ОШИБОЧНЫМИ, и оба поймал владелец.
+ *
+ * Первый принёс приёмы журнала — крупную цитату в линейках и разрыв колонки
+ * «на глаз». Швейцарская манера этого не знает: иерархию держат размер, вес и
+ * положение на модуле, а не декор.
+ *
+ * Второй унёс метку раздела в левое поле и оставил рассказ без заголовков:
+ * «ты просто упаковал весь текст в один вид, никаких заголовков, надзаголовки
+ * вынес вправо, хотя у нас по паттерну они над заголовком». Паттерн страницы
+ * не обсуждается: метка стоит НАД крупной строкой, и лонгрид его наследует.
+ *
+ * Что осталось от швейцарских правил и работает здесь:
+ *   — асимметрия: текстовый блок смещён от левого поля и не занимает всю
+ *     ширину, поле слева работает колонкой под номер;
+ *   — нумерация разделов: в длинном тексте номер — навигация, а не украшение;
+ *   — мера строки 60–72 знака, набор флаговый;
+ *   — четыре ступени кегля без промежуточных.
+ */
+/*
+ * ─── РЕЛЬС СНЯТ 14.09.2026, ЛОНГРИД ВЕРНУЛСЯ НА ОБЩУЮ СЕТКУ ────────────────
+ *
+ * Решение владельца: «убрать левую навигацию и вернуть содержимое к сетке, как
+ * на остальных кейсах».
+ *
+ * Вместе с рельсом ушло всё, что держалось на нём: колонка оглавления и вторая
+ * колонка потока, правило «одна силовая линия» (`grid-column: 1 / 11` у метки,
+ * заголовка, текста, пары, выноса и карточек), номер раздела в поле, полоса
+ * оглавления на узком экране и собственная сетка шапки. Теперь рассказ делит
+ * двенадцать колонок и чередование смещений с остальными семью кейсами.
+ *
+ * Осталась только типографика рассказа — она про чтение, а не про раскладку.
+ */
+
+/*
+ * ─── РИТМ РАССКАЗА ПО МАКЕТУ 189:707 ───────────────────────────────────────
+ *
+ * Все числа сняты с кадра владельца при 1920 и переведены в доли ширины
+ * содержимого (1800), чтобы держаться на любой ширине:
+ *
+ *   имя → лид            60      (3.33 %)
+ *   лид → первый блок    120     (6.67 %)
+ *   раздел → раздел      160     (8.89 %)
+ *   метка → тезис        16      — стоит в разметке блока
+ *   тезис → тело         32      — и там же
+ *   лид: ширина          578     (32.1 %), кегль 20/28
+ *
+ * Шаблонный ритм сюда не годился: между разделами он даёт 240 при 1920,
+ * потому что в макете кейса-образца между ними стоят кадры, а в рассказе их
+ * нет — блоки расходились в полтора раза шире образца.
+ */
+.pc-root[data-layout="longread"] .pc-flow > * {
+  margin-block-start: calc(var(--pa-inner) * 0.0889);
+}
+
+/*
+ * Лид → первый блок: 120 в макете. Шаблонный зазор после кадра героя здесь
+ * лишний — кадра у рассказа нет, а `.pc-body` всё равно отводил под него 167.
+ */
+/*
+ * 🔴 Пустая пара кадров снята. Каркас рисует позиции показов даже без
+ * изображений — у рассказа их нет вовсе, и блок нулевой высоты всё равно
+ * отводил себе 88 px отступа между лидом и первым разделом.
+ */
+.pc-root[data-layout="longread"] .pc-shots {
+  display: none;
+}
+
+.pc-root[data-layout="longread"] .pc-body {
+  margin-block-start: 0;
+}
+
+.pc-root[data-layout="longread"] .pc-flow > *:first-child {
+  margin-block-start: calc(var(--pa-inner) * 0.0667);
+}
+
+.pc-root[data-layout="longread"] .pc-lede {
+  font-size: var(--s-type-lead);
+  line-height: 1.4;
+  max-inline-size: calc(var(--pa-inner) * 0.321);
+}
+
+/*
+ * Мера строки у рассказа снята: ширину задаёт колонка, ровно как в макете —
+ * там текст занимает все 884 своего блока, а не часть их.
+ */
+.pc-root[data-layout="longread"] .pc-section > p.pc-section-text,
+.pc-root[data-layout="longread"] .pc-section > ul.pc-section-text,
+.pc-root[data-layout="longread"] .pc-item-text {
+  max-inline-size: none;
+}
+
+/* Номер пункта стоит в строке текста, как «1.Ответ на вопрос…» в макете. */
+.pc-root[data-layout="longread"] .pc-item {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--p-space-1);
+  align-items: baseline;
+}
+
+/*
+ * Номер стоит В СТРОКЕ с текстом и с точкой: «1.Ответ на вопрос…» — так в
+ * макете `189:707`. Точку даёт псевдоэлемент, в данных её нет.
+ */
+.pc-root[data-layout="longread"] .pc-item-num::after {
+  content: ".";
+}
+
+.pc-root[data-layout="longread"] .pc-item-num {
+  grid-column: 1;
+  margin-block-end: 0;
+  font-family: var(--pc-text-font);
+  font-size: var(--s-type-body);
+  line-height: 1.5;
+  color: inherit;
+}
+
+.pc-root[data-layout="longread"] .pc-item-text {
+  grid-column: 2;
+}
+
+/*
+ * ─── МАНЕРА БЛОКОВ ИЗ МАКЕТА 189:707 ───────────────────────────────────────
+ *
+ * Владелец 14.09.2026: «выполни блоки прямо в той же манере, как у меня».
+ * Снято с кадра при 1920:
+ *
+ *   один абзац           884  — во всю ширину блока (Frame 738003913)
+ *   два абзаца           426 + 32 + 426 — В ДВЕ КОЛОНКИ (Frame 1321314119)
+ *   пункты списка        884  — каждый отдельной строкой, номер слитно
+ *   гипотезы             578 + 32 + 579 — блок ШИРЕ прочих, до правого поля
+ *
+ * Первые три живут внутри шести колонок (5/11), гипотезы занимают 5/13.
+ */
+
+/*
+ * 🔴 СЧЁТ ИДЁТ ПО СОСЕДСТВУ, А НЕ ПО `nth-of-type`.
+ *
+ * Тезис раздела — тоже `p` (класс `pc-part`), поэтому `nth-of-type` считал его
+ * первым, и одинокий абзац становился «чётным»: замер на 1920 показал его в
+ * правой половине блока, на 1120 вместо 666.
+ */
+
+/* По умолчанию абзац держит всю ширину блока — как в макете. */
+.pc-root[data-layout="longread"] .pc-section > p.pc-section-text {
+  grid-column: 5 / 11;
+}
+
+/* Абзац, за которым идёт второй, — левая колонка; сам второй — правая. */
+.pc-root[data-layout="longread"] .pc-section > p.pc-section-text:has(+ p.pc-section-text) {
+  grid-column: 5 / 8;
+}
+
+.pc-root[data-layout="longread"] .pc-section > p.pc-section-text + p.pc-section-text {
+  grid-column: 8 / 11;
+}
+
+/*
+ * Гипотезы шире рассказа: в макете их блок идёт от 671 до правого поля 1860,
+ * а карточки внутри делят его пополам — 578 и 579 при желобе 32.
+ */
+.pc-root[data-layout="longread"] .pc-section > .pc-cards {
+  grid-column: 5 / 13;
+}
+
+@media (max-width: 899px) {
+  .pc-root[data-layout="longread"] .pc-section > p.pc-section-text,
+  .pc-root[data-layout="longread"] .pc-section > p.pc-section-text:has(+ p.pc-section-text),
+  .pc-root[data-layout="longread"] .pc-section > p.pc-section-text + p.pc-section-text,
+  .pc-root[data-layout="longread"] .pc-section > .pc-cards {
+    grid-column: 1 / 13;
+  }
+}
+
+/*
+ * ─── ОДНА ВЕРТИКАЛЬ РАССКАЗА ───────────────────────────────────────────────
+ *
+ * 🔴 ВСЕ БЛОКИ НАЧИНАЮТСЯ С ПЯТОЙ КОЛОНКИ. Числа взяты из макета владельца
+ * `189:707`: при ширине 1920 и поле 60 каждый содержательный блок стоит на
+ * x = 671 и держит ширину 884 — это ровно шесть колонок из двенадцати,
+ * `grid-column: 5 / 11`. На поле остаются только шапка, имя кейса и лид.
+ *
+ * Чередование шаблона здесь снято (признак `data-shift` лонгриду не выдаётся):
+ * оно уводит каждый второй блок к полю, и вертикаль прыгала 60 → 503 → 60. В
+ * макете между блоками стоят кадры, и глазу есть от чего оттолкнуться; в
+ * рассказе кадров нет, и прыжок читается как сбой, а не как ритм.
+ *
+ * Владелец 14.09.2026: «поставь силовую линию для текстовых блоков одну» — и
+ * прислал этот кадр как образец.
+ */
+.pc-root[data-layout="longread"] .pc-section > .pc-kicker,
+.pc-root[data-layout="longread"] .pc-section > .pc-part,
+.pc-root[data-layout="longread"] .pc-section > .pc-lead,
+.pc-root[data-layout="longread"] .pc-section > .pc-label,
+.pc-root[data-layout="longread"] .pc-section > p.pc-section-text,
+.pc-root[data-layout="longread"] .pc-section > ul.pc-section-text,
+.pc-root[data-layout="longread"] .pc-section > .pc-items,
+.pc-root[data-layout="longread"] .pc-section > .pc-cards,
+.pc-root[data-layout="longread"] .pc-section > .pc-compare,
+.pc-root[data-layout="longread"] .pc-section > .pc-aside {
+  grid-column: 5 / 11;
+  /* Мера строки здесь уже не работает: колонка у́же её. */
+  max-inline-size: none;
+}
+
+/*
+ * 🔴 СХЕМА И ВЕЛИЧИНЫ — БЛОКИ ПОКАЗА, А НЕ ТЕКСТА.
+ *
+ * Владелец 14.09.2026: «сделай их в таком же формате, как у кейсов — на всю
+ * ширину и высоту, как положено этим блокам». Поэтому они единственные в
+ * рассказе, кто не встаёт в колонку 5/11: у них двенадцать колонок и кадровая
+ * пропорция подложки, как на остальных семи страницах.
+ */
+
+/* Мера пункта снята: ширину держит колонка блока. */
+.pc-root[data-layout="longread"] .pc-item-text {
+  max-inline-size: none;
+}
+
+/* Карточки делят колонку пополам, а не восемь правых колонок страницы. */
+.pc-root[data-layout="longread"] .pc-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pc-root[data-layout="longread"] .pc-card[data-side] {
+  grid-column: auto;
+}
+
+.pc-root[data-layout="longread"] .pc-cards-rule {
+  grid-column: 1 / -1;
+}
+
+/* В одну колонку вторая линия ряда встала бы второй чертой подряд. */
+.pc-root[data-layout="longread"] .pc-cards-rule[data-side="right"] {
+  display: none;
+}
+
+/* ─── Ниже точки перелома вертикаль одна и та же: поле страницы ──────────── */
+@media (max-width: 899px) {
+  .pc-root[data-layout="longread"] .pc-section > .pc-kicker,
+  .pc-root[data-layout="longread"] .pc-section > .pc-part,
+  .pc-root[data-layout="longread"] .pc-section > .pc-lead,
+  .pc-root[data-layout="longread"] .pc-section > .pc-label,
+  .pc-root[data-layout="longread"] .pc-section > p.pc-section-text,
+  .pc-root[data-layout="longread"] .pc-section > ul.pc-section-text,
+  .pc-root[data-layout="longread"] .pc-section > .pc-items,
+  .pc-root[data-layout="longread"] .pc-section > .pc-cards,
+  .pc-root[data-layout="longread"] .pc-section > .pc-compare,
+  .pc-root[data-layout="longread"] .pc-section > .pc-aside {
+    grid-column: 1 / 13;
+  }
+
+  .pc-root[data-layout="longread"] .pc-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/*
+ * ─── ТИПОГРАФИКА РАССКАЗА: ОДНА НА ВСЕ ШИРИНЫ ──────────────────────────────
+ *
+ * 🔴 РАЗДЕЛЕНИЕ, КОТОРОГО ЗДЕСЬ НЕ БЫЛО ДО 14.09.2026: раскладка зависит от
+ * ширины, чтение — нет.
+ *
+ * Вся подача лонгрида лежала внутри `@media (min-width: 900px)`, и ниже 900
+ * рассказ возвращался к шаблонному ритму 1.18 — той самой плотности, которую
+ * владелец забраковал на десктопе. Замер на планшете 768 (14.09.2026): тело
+ * 16 px с интерлиньяжем 18.88 на строке в 73 знака.
+ *
+ * Теперь мера и ритм строк объявлены здесь, в общем потоке, а медиазапрос
+ * ниже держит только раскладку: колонки, рельс, поля. Величины те же, что
+ * стояли на десктопе, — это перенос, а не правка.
+ */
+/*
+ * 🔴 МЕРЫ СТРОКИ У РАССКАЗА НЕТ: ширину держит колонка.
+ *
+ * В макете `189:707` текст занимает все 884 своего блока, и правый край у
+ * текста, тезиса и пары один. Мера в пикселях обрезала текст на 820 и делала
+ * его у́же соседей — та самая разъезжающаяся правая линия.
+ *
+ * Ритм строк остаётся свой: 1.5 против шаблонных 1.18. Это решение владельца
+ * по замеру витрин (Apple HIG 17/25, Carbon и Material 16/24), и от ширины оно
+ * не зависит.
+ */
+.pc-root[data-layout="longread"] .pc-section > p.pc-section-text,
+.pc-root[data-layout="longread"] .pc-section > ul.pc-section-text,
+.pc-root[data-layout="longread"] .pc-item-text {
+  line-height: 1.5;
+}
+
+/*
+ * ─── ПАРА «БЫЛО → СТАЛО» ───────────────────────────────────────────────────
+ * Половина рассказа устроена как сравнение прежнего порядка с новым, и пара
+ * показывает разницу глазом. Владелец 2026-09-11 выбрал эту подачу вместе с
+ * выносом на поле: тринадцать одинаковых текстовых блоков читались стеной.
+ *
+ * 🔴 Черта СВЕРХУ, а не рамка вокруг. Рамка сделала бы из пары карточку —
+ * объект, спорящий за внимание с кадрами и плоскостью цифр. Здесь же это часть
+ * текста, просто разложенная на две колонки.
+ */
+.pc-compare {
+  /*
+   * 🔴 Ширину задаём ЯВНО: секция — сетка на двенадцать колонок, и без этого
+   * пара занимала одну из них. На узком экране колонка равна 37 px, и текст
+   * ломался по буквам столбиком.
+   */
+  grid-column: 1 / 13;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-block-start: 1px solid var(--pc-rule);
+  margin-block-start: var(--pc-gap-thesis);
+}
+
+.pc-compare-cell {
+  padding-block: var(--pc-compare-pad);
+  padding-inline-end: var(--pc-compare-gap);
+}
+
+/* Вторая колонка отделена линией и отбита от неё на тот же зазор. */
+.pc-compare-cell[data-after="true"] {
+  border-inline-start: 1px solid var(--pc-rule-soft);
+  padding-inline: var(--pc-compare-gap) 0;
+}
+
+.pc-compare-mark {
+  font-family: var(--pa-mono);
+  font-size: var(--pc-compare-mark);
+  letter-spacing: var(--pa-meta-tracking);
+  text-transform: uppercase;
+  color: var(--pc-muted);
+  margin-block-end: 12px;
+}
+
+.pc-compare-text {
+  margin: 0;
+  font-family: var(--pc-text-font);
+  font-size: var(--pc-compare-size);
+  line-height: 1.5;
+  color: var(--pc-fg-soft);
+}
+
+/*
+ * ─── ВЫНОС НА ПОЛЕ ─────────────────────────────────────────────────────────
+ * Величина и подпись к ней на правом поле раздела. До этого поле пустовало:
+ * колонка текста кончалась, а до края полосы оставалось больше четырёхсот
+ * пикселей воздуха.
+ *
+ * 🔴 В разметке вынос идёт ПОСЛЕ текста, а в сетке встаёт рядом: диктор читает
+ * сначала рассказ, потом сноску к нему, а глаз видит их вместе.
+ */
+.pc-aside {
+  /* Та же причина, что у пары: без явной ширины вынос сжимался до колонки. */
+  grid-column: 1 / 13;
+  display: block;
+  border-block-start: 2px solid var(--pa-ink);
+  padding-block-start: 12px;
+  margin-block-start: var(--pc-gap-thesis);
+  font-family: var(--pc-text-font);
+  font-size: var(--pc-aside-size);
+  line-height: 1.45;
+  color: var(--pc-fg-soft);
+}
+
+.pc-aside-value {
+  display: block;
+  font-size: var(--pc-aside-value);
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--pa-ink);
+  margin-block-end: 8px;
+}
+
+.pc-aside-note {
+  display: block;
+}
+
+@media (max-width: 899px) {
+  /* На узком экране пара становится двумя блоками подряд, а не колонками. */
+  .pc-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .pc-compare-cell {
+    padding-inline-end: 0;
+  }
+
+  .pc-compare-cell[data-after="true"] {
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--pc-rule-soft);
+    padding-inline: 0;
+  }
+}
+
+/*
+ * ─── КАДР ГЕРОЯ «ДИЗАЙН-СИСТЕМЫ» ШИРЕ ОБЩЕЙ ДОЛИ ──────────────────────────
+ *
+ * Общее правило даёт кадру 55 % ширины подложки — доля из макета, снятая с
+ * мокапа устройства. Здесь внутри не устройство, а панель переменных: имена
+ * токенов на 55 % набирались около 9 px и переставали читаться. При 64 % кадр
+ * занимает по высоте четыре пятых подложки, и поле по краям остаётся.
+ */
+.pc-root[data-case="design-system"] [data-testid="pc-hero"] .pc-shot-frame img {
+  inline-size: 64%;
+}
+
+/*
+ * На узком экране подложка героя принимает пропорцию самого кадра.
+ *
+ * Подложка держит 2.71:1 на любой ширине, кадр — 2.15:1. На десктопе разница
+ * работает на кадр: он стоит по центру, и поле остаётся полем. На 375 px
+ * подложка всего 124 px высотой, и доля 92 % уже не помещалась — картинка
+ * вылезала на 23 px сверху и снизу, срезая нижнюю строку с числами.
+ *
+ * Здесь плоскость подстраивается под кадр, а не наоборот: кадр виден целиком.
+ * Читать имена переменных на телефоне всё равно не выйдет — как и на соседних
+ * кадрах гайда, — но устройство кадра видно: слева список значений, справа
+ * собранные по ним поля.
+ */
+@media (max-width: 899px) {
+  .pc-root[data-case="design-system"] [data-testid="pc-hero"] .pc-shot-frame {
+    aspect-ratio: 1120 / 520;
+  }
+
+  .pc-root[data-case="design-system"] [data-testid="pc-hero"] .pc-shot-frame img {
+    inline-size: 100%;
   }
 }
