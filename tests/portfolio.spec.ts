@@ -779,6 +779,154 @@ test("каждый адрес отдаёт свои мета и текст бе�
 });
 
 /*
+ * ─── СКРЫТАЯ СТРАНИЦА ЛЕГКО СТАНОВИТСЯ НЕСУЩЕСТВУЮЩЕЙ ──────────────────────
+ *
+ * Разбор маршрута снисходителен: неизвестный первый сегмент возвращает главную,
+ * а `readAndCanonicalize` тут же ПРАВИТ адрес на `/`. То есть стоит пропасть
+ * ветке `brief` — и ссылка, отправленная заказчику, молча покажет ему главную,
+ * стерев `/brief` из строки. Экран верный, содержимое верное, врёт только
+ * адрес: ровно тот класс дефектов, из-за которого адрес здесь — отдельный
+ * предмет проверки.
+ *
+ * Снятие запрета на уходе проверяется тем же тестом: мета — свойство ЭКРАНА, и
+ * `noindex`, переживший переход на главную, закрыл бы от поиска её.
+ */
+test("скрытый адрес брифа открывает бриф, а не главную", async ({ page }) => {
+  await page.goto(portfolioUrl("/brief"));
+
+  await expect(page.getByTestId("pb-root")).toBeVisible();
+  await expect(page).toHaveURL(/\/brief$/);
+  await expect(page).toHaveTitle(/Бриф/);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+
+  await page.getByRole("button", { name: /на главную/ }).click();
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator('meta[name="robots"]'), "noindex пережил уход с брифа").toHaveCount(0);
+});
+
+/*
+ * ─── «СКРЫТАЯ» — ЭТО СВОЙСТВО ВЫГРУЗКИ, А НЕ НАМЕРЕНИЯ ─────────────────────
+ *
+ * Страницу закрывают от поиска четыре разные вещи, и каждая живёт в своём
+ * файле: её нет в карте сайта, её нет среди пререндеренных адресов, сервер
+ * отдаёт на неё `X-Robots-Tag`, а папка с ответами заказчиков закрыта. Любая
+ * из четырёх теряется поодиночке и молча — особенно первая: стоит добавить
+ * адрес в список пререндера, и он сам попадёт и в `sitemap.xml`.
+ *
+ * 🔴 В `robots.txt` страницы не должно быть НИ В КАКОМ ВИДЕ, в том числе как
+ * `Disallow`. Этот файл читают все и он публичен: запись в нём — не запрет, а
+ * указатель на адрес, который иначе ниоткуда не узнать.
+ */
+test("бриф закрыт от поиска и не попал в выгрузку", async () => {
+  const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "dist");
+
+  const sitemap = fs.readFileSync(path.join(dist, "sitemap.xml"), "utf8");
+  expect(sitemap, "бриф попал в карту сайта").not.toContain("/brief");
+
+  const robots = fs.readFileSync(path.join(dist, "robots.txt"), "utf8");
+  expect(robots, "robots.txt называет скрытый адрес — это указатель, а не запрет").not.toContain(
+    "brief",
+  );
+
+  expect(
+    fs.existsSync(path.join(dist, "brief", "index.html")),
+    "бриф пререндерен — значит он есть и в карте сайта",
+  ).toBe(false);
+
+  const htaccess = fs.readFileSync(path.join(dist, ".htaccess"), "utf8");
+  expect(htaccess, "сервер не отдаёт noindex на /brief").toMatch(
+    /SetEnvIf Request_URI "\^\/brief"/,
+  );
+  expect(htaccess, "заголовок noindex не выставляется").toMatch(
+    /Header set X-Robots-Tag "noindex[^"]*" env=/,
+  );
+  expect(htaccess, "папка с ответами заказчиков открыта из веба").toMatch(/brief-data/);
+
+  /* Приёмник обязан уехать вместе с сайтом: без него форма отправляет в пустоту. */
+  expect(fs.existsSync(path.join(dist, "brief-send.php")), "приёмник брифа не собран").toBe(true);
+});
+
+/*
+ * ─── «ОТПРАВЛЕНО» ОБЯЗАНО ОЗНАЧАТЬ «ПРИНЯТО» ───────────────────────────────
+ *
+ * Дефект, найденный на локальном прогоне 02.11.2026: форма показывала «Бриф у
+ * меня», получив в ответ HTML главной страницы. Так выходит, когда приёмника
+ * на месте нет — запрос попадает в SPA-fallback из `.htaccess`, и сервер
+ * честно отвечает 200. Проверять только код ответа здесь нельзя: человек
+ * уходит довольный, а на другом конце пусто — именно тот случай, ради которого
+ * у приёмника два канала записи.
+ *
+ * 🔴 Обе ветки в одном тесте, и это не экономия: ветка «не приняли» без ветки
+ * «приняли» прошла бы и у формы, которая не отправляет вообще ничего.
+ */
+test("бриф считает отправленным только ответ приёмника", async ({ page }) => {
+  await page.goto(portfolioUrl("/brief"));
+
+  await page.getByLabel(/Как вас зовут/).fill("Пётр");
+  await page.getByLabel(/Почта для ответа/).fill("p@example.com");
+  await page.getByLabel(/Что происходит сейчас/).fill("Клиенты не доходят до заявки");
+
+  /* 1. Приёмника нет: сервер отдал оболочку приложения со статусом 200. */
+  await page.route("**/brief-send.php", (route) =>
+    route.fulfill({ body: "<!doctype html><title>Иван Игнатов</title>", contentType: "text/html", status: 200 }),
+  );
+
+  await page.getByRole("button", { name: /Отправить бриф/ }).click();
+
+  await expect(page.locator(".pb-failed"), "200 без ответа приёмника принят за отправку").toBeVisible();
+  await expect(page.locator(".pb-done")).toHaveCount(0);
+
+  /* 2. Настоящий ответ приёмника. */
+  await page.unroute("**/brief-send.php");
+  await page.route("**/brief-send.php", (route) =>
+    route.fulfill({ body: JSON.stringify({ mailed: true, ok: true }), contentType: "application/json", status: 200 }),
+  );
+
+  await page.getByRole("button", { name: /Отправить бриф/ }).click();
+
+  await expect(page.locator(".pb-done"), "ответ приёмника не принят за отправку").toBeVisible();
+});
+
+/*
+ * ─── СВЯЗЬ ОБЯЗАТЕЛЬНА, КОНКРЕТНОЕ ПОЛЕ — НЕТ ──────────────────────────────
+ *
+ * Почта перестала быть обязательной 02.11.2026 по решению владельца, и это
+ * открыло дыру: бриф можно было отправить, не оставив ни одного способа
+ * связи — заявка приходит, ответить некуда. Проверка требует пару целиком, а
+ * не конкретное поле: кто не хочет оставлять адрес, оставляет телеграм.
+ *
+ * 🔴 Вторая половина теста не формальность. Без неё он прошёл бы и у формы,
+ * которая ругается всегда, в том числе когда связь оставлена.
+ */
+test("бриф просит хотя бы один способ связи", async ({ page }) => {
+  await page.goto(portfolioUrl("/brief"));
+  await page.evaluate(() => window.localStorage.removeItem("portfolio-brief-draft"));
+  await page.reload();
+
+  await page.getByLabel(/Как вас зовут/).fill("Пётр");
+  await page.getByLabel(/Что происходит сейчас/).fill("Заявки не доходят");
+
+  await page.route("**/brief-send.php", (route) =>
+    route.fulfill({ body: JSON.stringify({ ok: true }), contentType: "application/json", status: 200 }),
+  );
+
+  await page.getByRole("button", { name: /Отправить бриф/ }).click();
+
+  /* Бриф не ушёл, сказано один раз, помечены оба поля пары. */
+  await expect(page.locator(".pb-done"), "бриф ушёл без единого контакта").toHaveCount(0);
+  await expect(page.locator(".pb-errors")).toContainText("хотя бы один способ связи");
+  await expect(page.locator(".pb-field-error")).toHaveCount(1);
+  await expect(page.locator(".pb-field[data-invalid]")).toHaveCount(2);
+
+  /* Телеграма достаточно: почта не единственный способ. */
+  await page.getByLabel(/Телеграм или телефон/).fill("@petr");
+  await page.getByRole("button", { name: /Отправить бриф/ }).click();
+
+  await expect(page.locator(".pb-done"), "телеграм не принят за способ связи").toBeVisible();
+});
+
+/*
  * ─── ПРОЗРАЧНОСТЬ ПЕРЕЖИВАЕТ ПЕРЕКОДИРОВАНИЕ ───────────────────────────────
  *
  * Дефект 15.09.2026, поймал владелец глазами: «у картинок появился чёрный

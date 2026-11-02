@@ -25,6 +25,7 @@ import { SheetCurtain } from "@/components/portfolio/archive/sheet-curtain"
  * скачивает, а Playfair живёт только на главной.
  */
 import { PortfolioArchiveView } from "./PortfolioArchiveView"
+import { PortfolioBriefView } from "./PortfolioBriefView"
 import { PortfolioCaseView } from "./PortfolioCaseView"
 
 import { applyScreenMeta } from "./portfolio-meta"
@@ -70,6 +71,27 @@ type Screen =
   /** Работы компании: тот же экран, кобальт компании спущен поверх ряда. */
   | { kind: "company"; companyId: CompanyId }
   | { kind: "case"; caseId: string; companyId: CompanyId }
+  /**
+   * Скрытая страница брифа. На неё не ведёт ни одна ссылка сайта: адрес
+   * отправляется человеку вручную, в карте сайта его нет, а от поиска страницу
+   * закрывает заголовок `X-Robots-Tag` из `public/.htaccess`.
+   *
+   * 🔴 Ветка здесь ОБЯЗАТЕЛЬНА, а не удобна. Разбор маршрута снисходителен:
+   * неизвестный первый сегмент возвращает главную, и `readAndCanonicalize`
+   * тут же заменяет адрес на `/`. То есть без этой ветки `/brief` показывал бы
+   * главную и молча стирал бы адрес из строки — ссылка, отправленная заказчику,
+   * приводила бы не туда.
+   */
+  | { kind: "brief" }
+
+/**
+ * Единственный сегмент адреса брифа.
+ *
+ * Константа, а не строка по месту: имя участвует в разборе, в сборке адреса, в
+ * мета и в двух проверках приёмки — переименование не должно требовать поиска
+ * по проекту.
+ */
+export const BRIEF_PATH = "brief"
 
 /** База сайта. В проде «/», но значение приходит из сборки, а не зашито. */
 const BASE = String(import.meta.env.VITE_PORTFOLIO_BASE_PATH ?? "/").replace(/\/$/, "")
@@ -100,6 +122,8 @@ function readScreen(): Screen {
 
   if (!companyId) return { kind: "home" }
 
+  if (companyId === BRIEF_PATH) return { kind: "brief" }
+
   const company = companyById(companyId)
   if (!company) return { kind: "home" }
 
@@ -114,6 +138,7 @@ function readScreen(): Screen {
 /** Единственный правильный адрес экрана. */
 function pathOf(screen: Screen): string {
   if (screen.kind === "home") return ""
+  if (screen.kind === "brief") return BRIEF_PATH
   if (screen.kind === "company") return screen.companyId
   return `${screen.companyId}/case/${screen.caseId}`
 }
@@ -209,7 +234,11 @@ export function PortfolioRoute() {
   */
   React.useEffect(() => {
     applyScreenMeta(
-      screen.kind === "home" ? undefined : screen.companyId,
+      screen.kind === "home"
+        ? undefined
+        : screen.kind === "brief"
+          ? BRIEF_PATH
+          : screen.companyId,
       screen.kind === "case" ? screen.caseId : undefined,
     )
   }, [screen])
@@ -450,6 +479,15 @@ export function PortfolioRoute() {
       onOpened={finishArrival}
     />
   ) : null
+
+  /*
+   * Бриф стоит в стороне от дорог сайта: занавес и приезжающий лист к нему не
+   * ведут, движение между ним и остальным — подмена (`cut` в `moveFor`). Он и в
+   * разводке рендера идёт отдельной веткой, до кейса.
+   */
+  if (screen.kind === "brief") {
+    return <PortfolioBriefView onHome={openHome} />
+  }
 
   if (screen.kind === "case" && company && study) {
     return (

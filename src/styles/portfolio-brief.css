@@ -1,0 +1,489 @@
+/*
+ * Слой скрытой страницы брифа — `/brief`.
+ *
+ * ─── ПОЧЕМУ ОТДЕЛЬНАЯ ПОВЕРХНОСТЬ, А НЕ ПОВТОРНОЕ ИСПОЛЬЗОВАНИЕ КЕЙСА ───────
+ * Поле здесь светлое, как на странице кейса, и по первому взгляду слой можно
+ * было бы не заводить. Но предмет другой: кейс читают, бриф ЗАПОЛНЯЮТ. У формы
+ * есть то, чего нет ни на одном экране сайта, — поля ввода, их рамки, фокус,
+ * состояние ошибки и зона нажатия у переключателей. Класть это в
+ * `portfolio-case.css` значило бы смешать два жанра в одном файле; взамен здесь
+ * нет ни одной величины, которой нет в тиерах: все `--pb-*` ссылаются вниз.
+ *
+ * ─── ЧТЕНИЕ НЕ ЗАВИСИТ ОТ ШИРИНЫ ───────────────────────────────────────────
+ * Мера строки и ритм полей одни на всех экранах — то же правило, что у лонгрида
+ * кейса. От ширины зависит только поле контейнера (`--pa-field`, приходит из
+ * семантики) и раскладка пары карточек выбора.
+ */
+
+@import "./portfolio-ink.css";
+
+:root {
+  /* ─── Цвет ──────────────────────────────────────────────────────────────── */
+  --pb-bg: var(--s-surface-page-quiet);
+  --pb-fg: var(--pa-ink);
+  /* Служебные строки: та же мягкость, что на странице кейса — 5.4:1 к полю. */
+  --pb-muted: color-mix(in srgb, var(--pa-ink) 60%, var(--pb-bg));
+  /* Поле ввода белее канвы: так рамка не единственный признак, что здесь пишут. */
+  --pb-input-bg: var(--s-surface-paper);
+  --pb-rule: var(--s-border-default);
+  --pb-rule-soft: var(--s-border-soft);
+  /*
+   * Рамка поля ввода. Берётся роль управляющего элемента (45 % чернил ≈ 3.1:1 к
+   * белому) — это порог 1.4.11 для границ, а не текстовый 4.5.
+   */
+  --pb-control: var(--s-border-control);
+  --pb-accent: var(--pa-cobalt);
+  --pb-danger: var(--s-status-danger);
+
+  /* ─── Мера и ритм ───────────────────────────────────────────────────────── */
+  /*
+   * Полоса вопросов. Та же мера, что у лонгрида кейса, минус запас на подпись:
+   * вопрос с пояснением читают так же, как абзац рассказа.
+   */
+  --pb-measure: 720px;
+  /* Между разделами — крупная отбивка блока; внутри раздела — шаг поля. */
+  --pb-gap-section: var(--s-space-block);
+  --pb-gap-field: var(--s-space-stack-lg);
+  --pb-gap-label: var(--s-space-stack-xs);
+  --pb-gap-option: var(--s-space-stack-sm);
+  --pb-pad-input: var(--s-space-inset-md);
+  --pb-pad-card: var(--s-space-inset-lg);
+  --pb-radius: var(--p-radius-md);
+
+  /* ─── Кегли ─────────────────────────────────────────────────────────────── */
+  /* Имя страницы. Одно слово, поэтому тот же знаменатель, что у имени кейса. */
+  --pb-title-size: clamp(40px, var(--pa-inner) / 13.85, 132px);
+  --pb-lede-size: var(--s-type-lead);
+  /* Вопрос — главное в строке; подпись под ним держится весом и цветом. */
+  --pb-label-size: var(--s-type-lead);
+  /*
+   * Подпись и сам ввод — 16 px без роста.
+   *
+   * 🔴 Мельче нельзя: Safari на iOS зумит страницу при фокусе на поле с кеглем
+   * меньше 16, и человек оказывается на увеличенной странице, которую потом
+   * отводит руками.
+   */
+  --pb-hint-size: var(--p-size-body);
+  --pb-input-size: var(--p-size-body);
+}
+
+/* ─── Канва ──────────────────────────────────────────────────────────────── */
+html[data-portfolio-surface="brief"],
+html[data-portfolio-surface="brief"] body {
+  background-color: var(--pb-bg);
+}
+
+.pb-root {
+  position: relative;
+  min-block-size: 100dvh;
+  background-color: var(--pb-bg);
+  color: var(--pb-fg);
+  font-family: var(--pa-sans);
+}
+
+.pb-screen {
+  padding: var(--pa-field);
+}
+
+/* ─── Шапка ───────────────────────────────────────────────────────────────── */
+.pb-top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-space-inset-md);
+  font-family: var(--pa-mono);
+  font-size: var(--pa-meta-size);
+  line-height: var(--pa-top-leading);
+  letter-spacing: var(--pa-meta-tracking);
+  color: var(--pb-muted);
+  text-transform: lowercase;
+}
+
+.pb-back {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color var(--pa-dur-hover) var(--pa-ease-item);
+}
+
+.pb-back:hover {
+  color: var(--pb-fg);
+}
+
+.pb-back:focus-visible {
+  outline: var(--s-border-edge) solid var(--pb-fg);
+  outline-offset: var(--s-space-inset-xs);
+}
+
+/*
+ * Зона нажатия добирается вылетом псевдоэлемента: 44 px по правилу проекта, а
+ * вид строки при этом не меняется.
+ */
+.pb-back::after {
+  content: "";
+  position: absolute;
+  inset-block: calc((var(--s-target-touch) - var(--pa-top-leading)) / -2);
+  inset-inline: calc(-1 * var(--s-space-inset-sm));
+}
+
+/* ─── Заголовок ───────────────────────────────────────────────────────────── */
+.pb-head {
+  max-inline-size: var(--pb-measure);
+  margin-block-start: var(--s-space-head);
+}
+
+.pb-title {
+  margin: 0;
+  font-size: var(--pb-title-size);
+  line-height: var(--p-leading-tight);
+  letter-spacing: var(--pa-word-tracking);
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.pb-lede {
+  margin-block: var(--s-space-stack-md) 0;
+  font-size: var(--pb-lede-size);
+  line-height: var(--p-leading-loose);
+  color: color-mix(in srgb, var(--pa-ink) 78%, var(--pb-bg));
+}
+
+/*
+ * Ссылки в тексте страницы — телеграм на экране «Бриф у меня» и почта в
+ * сообщении о неудачной отправке. Подчёркивание обязательно: это единственные
+ * ссылки на экране, и цветом они бы не читались как нажимаемые.
+ */
+.pb-lede a,
+.pb-failed a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: var(--s-space-inset-xs);
+}
+
+.pb-lede a:focus-visible,
+.pb-failed a:focus-visible {
+  outline: var(--s-border-edge) solid var(--pb-fg);
+  outline-offset: var(--s-space-inset-xs);
+}
+
+/* ─── Форма ───────────────────────────────────────────────────────────────── */
+.pb-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pb-gap-section);
+  max-inline-size: var(--pb-measure);
+  margin-block-start: var(--s-space-block);
+}
+
+.pb-section,
+.pb-choose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pb-gap-field);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-block-start: var(--s-border-hair) solid var(--pb-rule);
+  padding-block-start: var(--s-space-stack-md);
+}
+
+.pb-section-title {
+  margin: 0;
+  padding: 0;
+  font-family: var(--pa-mono);
+  font-size: var(--s-type-meta);
+  line-height: var(--p-leading-snug);
+  letter-spacing: var(--pa-meta-tracking);
+  text-transform: uppercase;
+  color: var(--pb-muted);
+  font-weight: 400;
+}
+
+/*
+ * Вводка раздела и подпись поля — один класс: это одна роль, «пояснение рядом
+ * с вопросом». Объяснять, зачем спрашиваю, нужно У ПОЛЯ, а не в подсказке по
+ * наведению и не за ссылкой: в эксперименте с вопросом о доходе объяснение
+ * рядом снизило пропуск с 35 % до 20 %.
+ */
+.pb-hint {
+  margin: 0;
+  font-size: var(--pb-hint-size);
+  line-height: var(--p-leading-loose);
+  color: var(--pb-muted);
+}
+
+/* Подпись раздела идёт сразу под его меткой, без шага поля между ними. */
+.pb-section > .pb-hint:first-of-type,
+.pb-choose > .pb-hint:first-of-type {
+  margin-block-start: calc(-1 * var(--pb-gap-field) + var(--s-space-stack-xs));
+}
+
+/* ─── Поле ────────────────────────────────────────────────────────────────── */
+.pb-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pb-gap-label);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pb-label {
+  font-size: var(--pb-label-size);
+  line-height: var(--p-leading-snug);
+  font-weight: 600;
+  padding: 0;
+}
+
+/*
+ * 🔴 Пометка словом, а не звёздочкой, и помечены ОБЯЗАТЕЛЬНЫЕ — их три из двух
+ * десятков. Пометка несёт смысл только когда помечено меньшинство; звёздочку
+ * же не читает ни человек, впервые видящий форму, ни диктор без подсказки.
+ */
+.pb-required {
+  font-weight: 400;
+  color: var(--pb-muted);
+}
+
+.pb-input {
+  inline-size: 100%;
+  min-block-size: var(--s-target-touch);
+  padding: var(--pb-pad-input);
+  border: var(--s-border-hair) solid var(--pb-control);
+  border-radius: var(--pb-radius);
+  background-color: var(--pb-input-bg);
+  color: var(--pb-fg);
+  font-family: var(--pa-sans);
+  font-size: var(--pb-input-size);
+  line-height: var(--p-leading-loose);
+  transition:
+    border-color var(--pa-dur-hover) var(--pa-ease-item),
+    box-shadow var(--pa-dur-hover) var(--pa-ease-item);
+}
+
+.pb-area {
+  resize: vertical;
+  overflow: hidden;
+}
+
+.pb-input:focus-visible {
+  outline: none;
+  border-color: var(--pb-accent);
+  /* Толщина рамки удваивается кольцом внутрь: поле не дёргается на фокусе. */
+  box-shadow: inset 0 0 0 var(--s-border-hair) var(--pb-accent);
+}
+
+.pb-field[data-invalid] .pb-input {
+  border-color: var(--pb-danger);
+}
+
+.pb-field-error {
+  margin: 0;
+  font-size: var(--pb-hint-size);
+  line-height: var(--p-leading-body);
+  color: var(--pb-danger);
+}
+
+/* ─── Варианты ────────────────────────────────────────────────────────────── */
+.pb-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pb-gap-option);
+}
+
+/*
+ * Переключатель и флажок оставлены СВОИМИ, браузерными.
+ *
+ * 🔴 Это решение, а не недоделка: нарисованный свой переключатель теряет
+ * высокий контраст, принудительные цвета Windows и состояние «выбран» для
+ * диктора, если собран невнимательно, — а выигрыш здесь чисто декоративный.
+ * Задана только зона нажатия и кегль.
+ */
+.pb-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-space-inset-sm);
+  min-block-size: var(--s-target-touch);
+  font-size: var(--pb-input-size);
+  line-height: var(--p-leading-loose);
+  cursor: pointer;
+}
+
+.pb-option input {
+  flex: none;
+  inline-size: var(--p-target-min);
+  block-size: var(--p-target-min);
+  margin: 0;
+  accent-color: var(--pb-accent);
+}
+
+/* ─── Карточки выбора: режим подачи и род задачи ──────────────────────────── */
+.pb-choose-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-space-stack-sm);
+}
+
+@media (min-width: 640px) {
+  .pb-choose-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pb-option-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-space-stack-xs);
+  padding: var(--pb-pad-card);
+  border: var(--s-border-hair) solid var(--pb-control);
+  border-radius: var(--pb-radius);
+  background-color: var(--pb-input-bg);
+  color: var(--pb-fg);
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--pa-dur-hover) var(--pa-ease-item),
+    background-color var(--pa-dur-hover) var(--pa-ease-item);
+}
+
+.pb-option-card:hover {
+  border-color: var(--pb-fg);
+}
+
+.pb-option-card:focus-visible {
+  outline: var(--s-border-edge) solid var(--pb-fg);
+  outline-offset: var(--s-space-inset-xs);
+}
+
+/*
+ * Выбранная карточка держится НЕ ТОЛЬКО цветом: кобальтовая заливка идёт вместе
+ * со сменой цвета текста и толщиной рамки. Цвет как единственный признак
+ * состояния — ровно тот дефект, который не виден при чёрно-белой печати и при
+ * принудительных цветах системы.
+ */
+.pb-option-card[aria-pressed="true"] {
+  border-color: var(--pb-accent);
+  box-shadow: inset 0 0 0 var(--s-border-hair) var(--pb-accent);
+  background-color: var(--s-surface-accent);
+  color: var(--s-text-on-ink);
+}
+
+.pb-option-title {
+  font-size: var(--pb-label-size);
+  line-height: var(--p-leading-snug);
+  font-weight: 600;
+}
+
+.pb-option-note {
+  font-size: var(--pb-hint-size);
+  line-height: var(--p-leading-body);
+  color: var(--pb-muted);
+}
+
+.pb-option-card[aria-pressed="true"] .pb-option-note {
+  color: var(--s-text-muted-on-accent);
+}
+
+/* ─── Сводка ошибок ──────────────────────────────────────────────────────── */
+/*
+ * Сводка стоит НАД формой и забирает фокус: человек должен услышать, сколько
+ * всего не хватает, а не искать красные рамки по странице. Ссылки внутри ведут
+ * к самим полям.
+ */
+.pb-errors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-space-stack-sm);
+  padding: var(--pb-pad-card);
+  border: var(--s-border-edge) solid var(--pb-danger);
+  border-radius: var(--pb-radius);
+  font-size: var(--pb-input-size);
+  line-height: var(--p-leading-loose);
+}
+
+.pb-errors ul {
+  margin: 0;
+  padding-inline-start: var(--s-space-inset-lg);
+}
+
+.pb-errors a {
+  color: var(--pb-danger);
+  text-decoration: underline;
+}
+
+/* ─── Отправка ───────────────────────────────────────────────────────────── */
+.pb-send {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-space-stack-md);
+  border-block-start: var(--s-border-hair) solid var(--pb-rule);
+  padding-block-start: var(--s-space-stack-lg);
+}
+
+.pb-submit {
+  align-self: flex-start;
+  min-block-size: var(--s-target-touch);
+  padding: var(--s-space-inset-md) var(--s-space-inset-lg);
+  border: 0;
+  border-radius: var(--pb-radius);
+  background-color: var(--s-surface-accent);
+  color: var(--s-text-on-ink);
+  font-family: var(--pa-sans);
+  font-size: var(--pb-input-size);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--pa-dur-hover) var(--pa-ease-item);
+}
+
+.pb-submit:hover {
+  background-color: color-mix(in srgb, var(--pa-cobalt) 86%, var(--pa-ink));
+}
+
+.pb-submit:focus-visible {
+  outline: var(--s-border-edge) solid var(--pb-fg);
+  outline-offset: var(--s-space-inset-xs);
+}
+
+.pb-submit:disabled {
+  cursor: progress;
+  background-color: var(--pb-muted);
+}
+
+.pb-failed {
+  margin: 0;
+  font-size: var(--pb-input-size);
+  line-height: var(--p-leading-loose);
+  color: var(--pb-danger);
+}
+
+/* ─── Приманка для ботов ─────────────────────────────────────────────────── */
+/*
+ * 🔴 Поле уводится С ЭКРАНА, а не гасится `display: none`.
+ *
+ * Разница принципиальна: `display: none` и `visibility: hidden` простейший бот
+ * проверяет и пропускает такое поле, а абсолютно унесённое поле он видит как
+ * обычное и заполняет. Диктор его не прочитает — у поля `aria-hidden`, и
+ * табуляция в него не заходит (`tabindex="-1"`).
+ */
+.pb-trap {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  inset-inline-start: -10000px;
+  opacity: 0;
+}
+
+/* ─── Отправлено ─────────────────────────────────────────────────────────── */
+.pb-done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-space-stack-md);
+  max-inline-size: var(--pb-measure);
+  margin-block-start: var(--s-space-block);
+}

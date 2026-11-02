@@ -37,7 +37,26 @@ export interface ScreenMeta {
   canonical: string
   description: string
   title: string
+  /**
+   * Страница закрыта от индексации.
+   *
+   * 🔴 Этот признак — ВТОРОЙ рубеж, а не первый. Главный стоит на сервере:
+   * `X-Robots-Tag` из `public/.htaccess`. Причина в том, что скрытого адреса
+   * нет среди пререндеренных, поэтому прямой заход отдаёт шаблон главной, и
+   * краулер, который не исполняет JS, увидит её мета, а не эти. Тег `robots`
+   * отсюда страхует второй случай — краулер с JS, дошедший по ссылке из письма.
+   */
+  noindex?: true
 }
+
+/**
+ * Сегмент скрытой страницы брифа.
+ *
+ * Объявлен здесь, а не взят из `PortfolioRoute`: мета не должна зависеть от
+ * модуля маршрута — иначе пререндер и приёмка тянули бы за собой весь экран.
+ * Совпадение двух констант сторожит проверка приёмки.
+ */
+export const BRIEF_PATH = "brief"
 
 /** Адрес экрана без домена — та же форма, что у маршрутов. */
 export function pathForScreen(companyId?: string, caseId?: string): string {
@@ -55,6 +74,20 @@ export function pathForScreen(companyId?: string, caseId?: string): string {
  */
 export function metaForScreen(companyId?: string, caseId?: string): ScreenMeta {
   const canonical = `${SITE_ORIGIN}${pathForScreen(companyId, caseId)}`
+
+  /*
+   * Бриф. Описание нарочно пустое по смыслу: страница скрытая, и если она всё
+   * же окажется в выдаче, лучше строка без обещаний, чем приглашение зайти.
+   */
+  if (companyId === BRIEF_PATH) {
+    return {
+      canonical,
+      description: "Скрытая страница: вопросы к задаче перед началом работы.",
+      noindex: true,
+      title: `Бриф — ${AUTHOR}`,
+    }
+  }
+
   const company = companies.find((item) => item.id === companyId)
 
   if (!company) {
@@ -120,11 +153,21 @@ export function applyScreenMeta(companyId?: string, caseId?: string): void {
   link.href = meta.canonical
 
   /*
-    Цвет полосы браузера на телефоне — под поверхность ЭКРАНА, а не один на
-    сайт: главная и синий экран чернильные, страница кейса светлая. Один цвет
-    на все давал бы тёмную полосу над белой страницей и наоборот.
+    Тег `robots` ставится и снимается, а не только ставится: без снятия человек,
+    ушедший с брифа на главную нажатием, оставлял бы `noindex` на ней — экран
+    сменился бы, а запрет остался (тот же класс дефектов, что адрес, который
+    врёт после смены экрана).
   */
-  setMeta("name", "theme-color", caseId ? "#fdfdfc" : "#0b0b0b")
+  if (meta.noindex) setMeta("name", "robots", "noindex, nofollow")
+  else document.head.querySelector('meta[name="robots"]')?.remove()
+
+  /*
+    Цвет полосы браузера на телефоне — под поверхность ЭКРАНА, а не один на
+    сайт: главная и синий экран чернильные, страница кейса и бриф светлые. Один
+    цвет на все давал бы тёмную полосу над белой страницей и наоборот.
+  */
+  const light = Boolean(caseId) || companyId === BRIEF_PATH
+  setMeta("name", "theme-color", light ? "#fdfdfc" : "#0b0b0b")
 
   /* Карточка ссылки: мессенджеры и соцсети JS не исполняют, поэтому теги
      обязаны оказаться в ИСХОДНИКЕ страницы — их туда кладёт пререндер. */

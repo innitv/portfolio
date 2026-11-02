@@ -1,6 +1,6 @@
 # Карта компонентов — где что лежит
 
-Снято по `src/` 15 сентября 2026: 16 модулей, 105 блоков в CSS, 35 точек приёмки.
+Снято по `src/` 2 ноября 2026: 18 модулей, 135 блоков в CSS, 36 точек приёмки.
 Карта отвечает на один вопрос — **куда идти за правкой**. Номера строк —
 снимок этой даты: они сдвигаются, имена блоков нет. Значения и их тиеры —
 в [`INVENTORY.md`](INVENTORY.md) и `design/tokens/portfolio/`.
@@ -17,8 +17,13 @@ main.tsx
     ├── ArchiveSheet .............. тот же лист отдельно: приезд с кейса на компанию
     ├── PortfolioCaseView ......... страница кейса: шаблон и лонгрид
     │   └── useSmoothScroll ....... догоняющая прокрутка (Lenis)
+    ├── PortfolioBriefView ........ скрытая страница брифа (`/brief`)
     └── SheetCurtain .............. занавес между экранами
 ```
+
+`PortfolioBriefView` стоит в дереве особняком: к нему не ведёт ни одна ссылка
+сайта, движение к нему и от него — подмена без занавеса, и ни один другой экран
+о нём не знает. Адрес отправляется человеку вручную.
 
 `ArchiveSheet` стоит в дереве дважды, и это не ошибка: обычно лист рендерит
 `PortfolioArchiveView`, но при приезде с кейса маршрут показывает его сам —
@@ -37,7 +42,9 @@ main.tsx
 | `views/PortfolioRoute.tsx` | 515 | маршруты и движение пары экранов | `moveFor`, `scrollRestoration: manual` |
 | `views/PortfolioArchiveView.tsx` | 354 | главная: экран, полоса, ряд имён | управляемый вид, состояние приходит снаружи |
 | `views/portfolio-archive.model.ts` | 148 | модель синего экрана компании | `WORDMARK`, `archiveCompanies` |
-| `views/portfolio-meta.ts` | 136 | заголовок, описание и канонический адрес экрана | `metaForScreen`, `applyScreenMeta`, `SITE_ORIGIN` |
+| `views/portfolio-meta.ts` | 170 | заголовок, описание и канонический адрес экрана | `metaForScreen`, `applyScreenMeta`, `SITE_ORIGIN`, `noindex` брифа |
+| `views/PortfolioBriefView.tsx` | 532 | скрытая страница брифа: форма, два режима подачи, отправка | сводка ошибок, растущие поля, honeypot |
+| `views/brief.data.ts` | 418 | **все вопросы брифа** и их пояснения | правка формулировки — только сюда |
 | `views/portfolio-images.generated.ts` | 82 | манифест кадров (ширины webp + признак `avif`) | **сгенерирован, руками не правится** |
 | `components/portfolio/archive/archive-sheet.tsx` | 572 | синий экран: вкладки, кейсы, величины | `onOpened` отдаёт экран маршруту |
 | `components/portfolio/archive/stripe-raster.tsx` | 242 | заливка полосы: WebGL-растр | цвета числами — GLSL не видит CSS-переменных |
@@ -55,7 +62,14 @@ main.tsx
 | `prerender-portfolio.mjs` | 183 | снимает готовый HTML каждого адреса настоящим браузером | `yarn prerender` (входит в `yarn build`-цепочки `deploy` и `qa`) |
 | `deploy-portfolio-regru.mjs` | 159 | выгрузка на reg.ru через `curl` по файлу | `yarn deploy`, `yarn deploy:dry-run` |
 | `build-portfolio-avif.py` | 149 | AVIF рядом с каждым webp + перегенерация манифеста кадров | `yarn images` |
-| `upload-portfolio-ftp.py` | 114 | выгрузка одним FTP-соединением, только изменившееся | ⚠️ собственный докстринг зовёт `yarn upload`, такого скрипта в `package.json` нет — запускать `python tools/upload-portfolio-ftp.py` |
+| `upload-portfolio-ftp.py` | 118 | выгрузка одним FTP-соединением, только изменившееся | `yarn upload` |
+
+**Серверная часть (`public/`)**
+
+| Файл | Строк | Что делает | Куда попадает |
+|---|---|---|---|
+| `brief-send.php` | 236 | приём брифа: запись в файл, затем письмо | выгружается вместе с `dist/` |
+| `.htaccess` | — | SPA-fallback, отдача пререндера, кеш, `X-Robots-Tag` для `/brief`, 404 на `/brief-data` | копируется в билд |
 
 ## 3. Блоки главной — `pa-*` (37 классов, `portfolio-archive.css`)
 
@@ -104,6 +118,19 @@ main.tsx
 `.pc-section > .pc-label` — строки 665, 698, 1961, 2587. В счёт 68 классов
 входит, правку через него не искать.
 
+## 4.1 Блоки брифа — `pb-*` (30 классов, `portfolio-brief.css`)
+
+| Блок | Класс | Что это |
+|---|---|---|
+| Корень, экран, шапка | `pb-root`, `pb-screen`, `pb-top`, `pb-back` | канва светлая, как у кейса |
+| Заголовок | `pb-head`, `pb-title`, `pb-lede` | лид объясняет, сколько вопросов обязательны |
+| Форма и разделы | `pb-form`, `pb-section`, `pb-section-title`, `pb-hint` | `pb-hint` — одна роль и для вводки раздела, и для пояснения поля |
+| Поле | `pb-field`, `pb-label`, `pb-required`, `pb-input`, `pb-area`, `pb-field-error` | `pb-area` растёт под текст из JS |
+| Варианты | `pb-options`, `pb-option` | переключатель и флажок браузерные, задана только зона нажатия |
+| Карточки выбора | `pb-choose`, `pb-choose-row`, `pb-option-card`, `pb-option-title`, `pb-option-note` | режим подачи и род задачи; выбор держится не только цветом |
+| Ошибки и отправка | `pb-errors`, `pb-send`, `pb-submit`, `pb-failed` | сводка забирает фокус |
+| Приманка и успех | `pb-trap`, `pb-done` | `pb-trap` уводится за экран, а не гасится `display: none` |
+
 ## 5. Точки приёмки (`data-testid`)
 
 **Главная (17):** `pa-root`, `pa-top`, `pa-contacts`, `pa-word`, `pa-cursive`,
@@ -116,8 +143,10 @@ main.tsx
 `pc-figures`, `pc-path`, `pc-path-track`, `pc-shot-track`, `pc-shot-slot-*`,
 `pc-jump`, `pc-foot`.
 
-Тесты: `tests/portfolio.spec.ts` (38 объявлений; одно параметризовано восемью
-кейсами, итого 45 прогонов), истории — `views/*.stories.tsx` (7 play-функций).
+**Бриф (1):** `pb-root`.
+
+Тесты: `tests/portfolio.spec.ts` (42 объявления; одно параметризовано восемью
+кейсами, итого 49 прогонов), истории — `views/*.stories.tsx` (7 play-функций).
 
 🔴 Пять имён приёмки живут только как **отрицательные** проверки в
 `PortfolioArchiveView.stories.tsx`: `pa-car`, `pa-car-wrap`, `pa-hud`,
@@ -135,6 +164,8 @@ main.tsx
 | Главная, синий экран, вкладки | `styles/portfolio-archive.css` + `archive-sheet.tsx` |
 | Заливка полосы Archive | `components/portfolio/archive/stripe-raster.tsx` (GLSL, цвета числами) |
 | Движение перехода между экранами | `views/PortfolioRoute.tsx` (`moveFor`) |
+| **Вопрос брифа: формулировка, пояснение, обязательность** | `views/brief.data.ts` |
+| **Что происходит с отправленным брифом** | `public/brief-send.php` (запись в файл, потом письмо) |
 | Длительность или кривая | `styles/portfolio-tokens.css` (тиер 1) + `components/portfolio/motion.ts` |
 | Цвет, шкала, кегль | `styles/portfolio-tokens.css`, роли — тиер 2 |
 | Чернила, гарнитуры, общее поле обеих поверхностей | `styles/portfolio-ink.css` |

@@ -43,8 +43,10 @@ const MOTION_TS = "src/components/portfolio/motion.ts"
  */
 const GUARDED = [
   "src/styles/portfolio-archive.css",
+  "src/styles/portfolio-brief.css",
   "src/styles/portfolio-case.css",
   "src/views/PortfolioArchiveView.tsx",
+  "src/views/PortfolioBriefView.tsx",
   "src/views/PortfolioCaseView.tsx",
   "src/views/PortfolioRoute.tsx",
   "src/components/portfolio/archive/archive-sheet.tsx",
