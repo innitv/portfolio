@@ -35,6 +35,24 @@ const origin = "https://ivan-ignatov.online";
 const port = Number(process.env.PORTFOLIO_PRERENDER_PORT ?? 4180);
 const base = `http://127.0.0.1:${port}`;
 
+/**
+ * Скрытые адреса: HTML снимается, в карту сайта адрес НЕ попадает.
+ *
+ * 🔴 Пререндер нужен им не ради поиска, а ради первого кадра. Пока `/brief` не
+ * снимался, сервер отдавал на него `index.html` — то есть готовую разметку
+ * ГЛАВНОЙ, — и человек, пришедший по присланной ссылке, успевал увидеть чужой
+ * экран до того, как JS подменит его брифом. Владелец поймал это глазами
+ * 02.11.2026: «сначала видно прогрузку главной страницы».
+ *
+ * 🔴 Из `sitemap.xml` и `robots.txt` адрес при этом исключён, и это не
+ * противоречие: карта сайта — приглашение, а статический HTML — только ответ
+ * на уже известный адрес. Запрет индексации приходит с сервера
+ * (`X-Robots-Tag` в `public/.htaccess`), а снятый HTML несёт ещё и
+ * `<meta name="robots" content="noindex">` — его ставит `portfolio-meta.ts`,
+ * и теперь он доезжает до краулера без JS.
+ */
+const HIDDEN_ROUTES = ["/brief"];
+
 /** Адреса берутся из собранного бандла — тот же источник, что у экранов. */
 async function routesFromBundle(page) {
   return page.evaluate(() => {
@@ -107,14 +125,24 @@ async function main() {
 
     const written = [];
 
-    for (const route of routes) {
+    /* Скрытые идут последними: так их видно в выводе отдельным хвостом. */
+    for (const route of [...routes, ...HIDDEN_ROUTES]) {
       await page.goto(`${base}${route}`, { waitUntil: "networkidle" });
       /* Движение экрана: лесенка блоков и спуск плоскости идут до 1.2 с. */
       await page.waitForTimeout(1600);
 
+      /*
+        🔴 Узлы под `aria-hidden="true"` из проверки исключены, и это не дыра в
+        стороже. Он ловит снимок, сделанный до конца движения: тогда прозрачным
+        оказывается содержимое, которое человек ДОЛЖЕН видеть. А `aria-hidden`
+        — явное объявление обратного, и единственный такой узел на сайте —
+        приманка для ботов в форме брифа: она обязана быть невидимой, и на ней
+        проверка падала бы всегда (поймано 02.11.2026 при заведении /brief).
+      */
       const invisible = await page.evaluate(
         () =>
           Array.from(document.querySelectorAll("#root *")).filter((node) => {
+            if (node.closest('[aria-hidden="true"]')) return false;
             const style = window.getComputedStyle(node);
             return style.opacity === "0" && node.getBoundingClientRect().width > 0;
           }).length,
@@ -133,7 +161,7 @@ async function main() {
       fs.writeFileSync(target, html, "utf8");
 
       const title = await page.title();
-      written.push({ bytes: Buffer.byteLength(html), route, title });
+      written.push({ bytes: Buffer.byteLength(html), hidden: HIDDEN_ROUTES.includes(route), route, title });
     }
 
     await browser.close();
@@ -170,9 +198,11 @@ async function main() {
       "utf8",
     );
 
-    console.log(`Пререндер: ${written.length} адресов`);
+    console.log(`Пререндер: ${written.length} адресов, из них скрытых ${HIDDEN_ROUTES.length}`);
     for (const page of written) {
-      console.log(`  ${page.route.padEnd(34)} ${String(Math.round(page.bytes / 1024)).padStart(4)} КБ  ${page.title}`);
+      console.log(
+        `  ${page.route.padEnd(34)} ${String(Math.round(page.bytes / 1024)).padStart(4)} КБ  ${page.title}${page.hidden ? "   · скрытый, вне карты сайта" : ""}`,
+      );
     }
     console.log("robots.txt и sitemap.xml записаны");
   } finally {

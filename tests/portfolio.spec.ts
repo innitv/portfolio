@@ -829,10 +829,25 @@ test("бриф закрыт от поиска и не попал в выгруз
     "brief",
   );
 
-  expect(
-    fs.existsSync(path.join(dist, "brief", "index.html")),
-    "бриф пререндерен — значит он есть и в карте сайта",
-  ).toBe(false);
+  /*
+   * 🔴 Бриф ПРЕРЕНДЕРЕН, и это не противоречит скрытости. Пока своего HTML у
+   * адреса не было, сервер отдавал на него `index.html` — разметку главной, —
+   * и человек по присланной ссылке успевал увидеть чужой экран до подмены
+   * (поймал владелец 02.11.2026). Карта сайта — приглашение, статический HTML
+   * — ответ на уже известный адрес; второе без первого законно.
+   *
+   * Отсюда три требования к снятому файлу разом: он есть, в нём бриф, а не
+   * главная, и запрет индексации доезжает до краулера без JS.
+   */
+  const briefHtml = path.join(dist, "brief", "index.html");
+  expect(fs.existsSync(briefHtml), "у брифа нет своего HTML — заход покажет главную").toBe(true);
+
+  const brief = fs.readFileSync(briefHtml, "utf8");
+  expect(brief, "в снятом HTML брифа нет формы").toContain("Обязательных вопросов два");
+  expect(brief, "в снятом HTML брифа осталась главная").not.toContain("pa-word");
+  expect(brief, "в снятом HTML брифа нет запрета индексации").toMatch(
+    /<meta name="robots" content="noindex/,
+  );
 
   const htaccess = fs.readFileSync(path.join(dist, ".htaccess"), "utf8");
   expect(htaccess, "сервер не отдаёт noindex на /brief").toMatch(
