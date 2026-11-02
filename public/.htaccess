@@ -38,7 +38,26 @@ RewriteBase /
   # статику. Мета из рантайма тут не годится вовсе — прямой заход отдаёт
   # пререндеренную главную, и краулер без JS никакого noindex не увидит.
   SetEnvIf Request_URI "^/brief" PORTFOLIO_PRIVATE=1
+
+  # 🔴 ТРИ СТРОКИ ВМЕСТО ОДНОЙ, И КАЖДАЯ НУЖНА.
+  #
+  # На внутреннем редиректе Apache не передаёт переменные окружения как есть —
+  # он копирует их с префиксом REDIRECT_. А /brief как раз всегда проходит через
+  # редирект: своего файла у адреса нет, и запрос уходит в SPA-fallback ниже.
+  # Поэтому к моменту отправки заголовка переменная зовётся уже
+  # REDIRECT_PORTFOLIO_PRIVATE, и условие env=PORTFOLIO_PRIVATE не совпадает.
+  #
+  # Проверено на домене 02.11.2026: с одной строкой /brief отдавал 200 без
+  # X-Robots-Tag, хотя Cache-Control из соседнего правила приходил — то есть
+  # mod_headers работал, а условие молча не срабатывало. Машинной приёмкой этот
+  # класс не ловится вовсе: Playwright гоняет на vite preview, где .htaccess не
+  # читается. Проверять только curl-ом по домену после выгрузки.
+  #
+  # Третья строка — на случай двух редиректов подряд (правило пререндера, затем
+  # fallback): префикс тогда удваивается.
   Header set X-Robots-Tag "noindex, nofollow" env=PORTFOLIO_PRIVATE
+  Header set X-Robots-Tag "noindex, nofollow" env=REDIRECT_PORTFOLIO_PRIVATE
+  Header set X-Robots-Tag "noindex, nofollow" env=REDIRECT_REDIRECT_PORTFOLIO_PRIVATE
 </IfModule>
 
 # Ответы брифа: персональные данные заказчиков, доступа из веба быть не должно.
