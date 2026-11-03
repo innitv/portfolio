@@ -36,6 +36,9 @@ import {
  *    медленная в начале полоса повышает шанс ухода.
  */
 
+/** Год в служебной строке шапки — тот же приём, что «портфолио · 2026» на сайте. */
+const YEAR = new Date().getFullYear()
+
 /** Куда уходит заполненный бриф. */
 const ENDPOINT = "/brief-send.php"
 
@@ -98,7 +101,19 @@ function dropDraft(): void {
   }
 }
 
-export function PortfolioBriefView({ onHome }: { onHome?: () => void }) {
+/*
+ * 🔴 ВЫХОДА НА САЙТ С БРИФА НЕТ, и это решение владельца 03.11.2026.
+ *
+ * Кнопка «← на главную» стояла в шапке и на экране благодарности, пока бриф
+ * считался страницей сайта. Он ею не является: ссылку человек получает в
+ * переписке, портфолио он к этому моменту уже посмотрел, а на странице у него
+ * ровно одно дело. Выход из формы посреди заполнения — единственное, что эта
+ * кнопка предлагала, и предлагала она это рядом с первым же полем.
+ *
+ * Поэтому у вида нет пропа перехода вовсе: отсутствие кнопки — свойство
+ * экрана, а не настройка, которую можно случайно передать.
+ */
+export function PortfolioBriefView() {
   const [mode, setMode] = React.useState<BriefMode>("points")
   const [kind, setKind] = React.useState<"site" | "product" | null>(null)
   const [answers, setAnswers] = React.useState<Answers>(() => readDraft())
@@ -280,9 +295,6 @@ export function PortfolioBriefView({ onHome }: { onHome?: () => void }) {
               Прочитаю и отвечу в течение двух рабочих дней — на почту, которую вы оставили. Если
               задача срочная, напишите в телеграм: <a href="https://t.me/innitv">@innitv</a>.
             </p>
-            <button className="pb-back" onClick={onHome} type="button">
-              ← на главную
-            </button>
           </div>
         </div>
       </div>
@@ -293,10 +305,8 @@ export function PortfolioBriefView({ onHome }: { onHome?: () => void }) {
     <div className="pb-root" data-testid="pb-root">
       <div className="pb-screen">
         <div className="pb-top">
-          <button className="pb-back" onClick={onHome} type="button">
-            ← на главную
-          </button>
           <span>бриф</span>
+          <span>{YEAR}</span>
         </div>
 
         <header className="pb-head">

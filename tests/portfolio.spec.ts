@@ -799,9 +799,26 @@ test("скрытый адрес брифа открывает бриф, а не 
   await expect(page).toHaveTitle(/Бриф/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 
-  await page.getByRole("button", { name: /на главную/ }).click();
+  /* Выхода на сайт с брифа нет — кнопка снята 03.11.2026. */
+  await expect(page.getByRole("button", { name: /на главную|портфолио/ })).toHaveCount(0);
+
+  /*
+   * Уход проверяется переходом ВНУТРИ страницы, а не `page.goBack()`.
+   *
+   * 🔴 Разница принципиальна, и первая версия этой проверки была пустой:
+   * `goBack()` между двумя `goto` перезагружает документ, а в свежем документе
+   * тега `robots` нет и так — проверка проходила даже с намеренно сломанным
+   * снятием (негативный контроль 03.11.2026). Предмет же здесь — SPA-переход:
+   * тег снимает код, и только он. Отсюда `popstate` руками — ровно то, что
+   * делает кнопка «назад» в браузере.
+   */
+  await page.evaluate(() => {
+    window.history.pushState({}, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
 
   await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId("pa-word")).toBeVisible();
   await expect(page.locator('meta[name="robots"]'), "noindex пережил уход с брифа").toHaveCount(0);
 });
 

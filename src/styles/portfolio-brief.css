@@ -98,37 +98,13 @@ html[data-portfolio-surface="brief"] body {
   text-transform: lowercase;
 }
 
-.pb-back {
-  position: relative;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  letter-spacing: inherit;
-  color: inherit;
-  cursor: pointer;
-  transition: color var(--pa-dur-hover) var(--pa-ease-item);
-}
-
-.pb-back:hover {
-  color: var(--pb-fg);
-}
-
-.pb-back:focus-visible {
-  outline: var(--s-border-edge) solid var(--pb-fg);
-  outline-offset: var(--s-space-inset-xs);
-}
-
 /*
- * Зона нажатия добирается вылетом псевдоэлемента: 44 px по правилу проекта, а
- * вид строки при этом не меняется.
+ * ─── ЗДЕСЬ БОЛЬШЕ НЕТ `.pb-back`, И ЭТО НЕ ПОТЕРЯ ───────────────────────────
+ * Кнопка «← на главную» снята 03.11.2026 решением владельца: бриф не страница
+ * сайта, а лист с одним делом, и единственное, что кнопка предлагала рядом с
+ * первым полем, — уйти с формы. Шапка осталась двумя служебными подписями и
+ * ничего не нажимает, поэтому ни зоны нажатия, ни фокуса ей не нужно.
  */
-.pb-back::after {
-  content: "";
-  position: absolute;
-  inset-block: calc((var(--s-target-touch) - var(--pa-top-leading)) / -2);
-  inset-inline: calc(-1 * var(--s-space-inset-sm));
-}
 
 /* ─── Заголовок ───────────────────────────────────────────────────────────── */
 .pb-head {

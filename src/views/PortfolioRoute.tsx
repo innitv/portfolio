@@ -486,7 +486,7 @@ export function PortfolioRoute() {
    * разводке рендера идёт отдельной веткой, до кейса.
    */
   if (screen.kind === "brief") {
-    return <PortfolioBriefView onHome={openHome} />
+    return <PortfolioBriefView />
   }
 
   if (screen.kind === "case" && company && study) {
